@@ -9,6 +9,9 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 
+/**
+ * Конфигурация для бина Json для микросервисов.
+ */
 @AutoConfiguration
 public class JsonChassisAutoConfiguration {
 
@@ -20,13 +23,9 @@ public class JsonChassisAutoConfiguration {
         return builder -> {
             builder.simpleDateFormat(applicationDateFormat);
             builder.modules(new JavaTimeModule());
-
             builder.featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
             builder.featuresToDisable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-
             builder.featuresToEnable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL);
-
             builder.serializationInclusion(JsonInclude.Include.NON_NULL);
         };
     }

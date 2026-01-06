@@ -11,13 +11,18 @@ spring:
       host: ${CONSUL_HOST:localhost}
       port: 8500
       discovery:
+        prefer-ip-address: true
         health-check-path: /actuator/health/readiness
         health-check-interval: 10s
         instance-id: ${spring.application.name}:${random.value}
       config:
         enabled: true
+        format: yaml
         prefixes: [ config ]
         defaultContext: application
+        watch:
+          enabled: true
+          delay: 1000
 
   resilience:
     instance-name: "default"
@@ -42,9 +47,8 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   liquibase:
-    enabled: true
+    enabled: ${LIQUIBASE_ENABLED:true}
     default-schema: ${DB_SCHEMA:public}
-    driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME}
     user: ${DB_USER_NAME}
     password: ${DB_PASSWORD}
@@ -60,7 +64,6 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: http://${KEYCLOAK_HOST:keycloak}:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
-
       client:
         registration:
           keycloak:
@@ -71,13 +74,13 @@ spring:
             scope: openid
         provider:
           keycloak:
-            issuer-uri: http://keycloak:8080/realms/bank-realm
+            issuer-uri: http://${KEYCLOAK_HOST:keycloak}:8080/realms/${KEYCLOAK_REALM:bank-realm}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,refresh,prometheus,metrics
   endpoint:
     health:
       probes:
@@ -100,3 +103,8 @@ resilience4j:
       default:
         registerHealthIndicator: true
         eventConsumerBufferSize: 10
+
+logging:
+  level:
+    org.springframework.cloud.context.scope.refresh: DEBUG
+    io.github.habatoo.configurations: INFO

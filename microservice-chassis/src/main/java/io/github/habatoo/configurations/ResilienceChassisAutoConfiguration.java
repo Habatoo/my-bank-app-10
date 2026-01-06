@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Bean;
 
 import java.time.Duration;
@@ -37,8 +38,11 @@ public class ResilienceChassisAutoConfiguration {
 
     /**
      * Создает и настраивает реестр CircuitBreaker.
+     * При обновлении конфига в Consul, этот бин будет пересоздан,
+     * и все CircuitBreaker внутри него инициализируются заново с новыми проперти.
      */
     @Bean
+    @RefreshScope
     public CircuitBreakerRegistry circuitBreakerRegistry(ResilienceProperties props) {
         CircuitBreakerConfig config = createBaseConfig(props);
         CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(config);
@@ -60,10 +64,10 @@ public class ResilienceChassisAutoConfiguration {
      */
     private CircuitBreakerConfig createBaseConfig(ResilienceProperties props) {
         return CircuitBreakerConfig.custom()
-                .slidingWindowSize(props.slidingWindowSize().intValue())
-                .failureRateThreshold(props.failureRateThreshold().floatValue())
-                .waitDurationInOpenState(Duration.ofSeconds(props.waitDurationInOpenState()))
-                .permittedNumberOfCallsInHalfOpenState(props.permittedNumberOfCallsInHalfOpenState().intValue())
+                .slidingWindowSize(props.slidingWindowSize() != null ? props.slidingWindowSize().intValue() : 10)
+                .failureRateThreshold(props.failureRateThreshold() != null ? props.failureRateThreshold().floatValue() : 50.0f)
+                .waitDurationInOpenState(Duration.ofSeconds(props.waitDurationInOpenState() != null ? props.waitDurationInOpenState() : 60))
+                .permittedNumberOfCallsInHalfOpenState(props.permittedNumberOfCallsInHalfOpenState() != null ? props.permittedNumberOfCallsInHalfOpenState().intValue() : 10)
                 .build();
     }
 

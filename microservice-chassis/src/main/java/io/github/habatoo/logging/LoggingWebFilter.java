@@ -6,8 +6,21 @@ import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
+/**
+ * Interceptor (перехватчик) для обеспечения сквозного
+ * логирование каждого входящего HTTP-запроса,
+ * не вмешиваясь в логику контроллеров.
+ */
 @Slf4j
 public class LoggingWebFilter implements WebFilter {
+
+    /**
+     * Фильтр для входЯщих запросов - игнорирует эндпоинты health-check,
+     * которые вызываются инфраструктурой Consul. Проводит замеры времени исполнения запроса.
+     * @param exchange the current server exchange
+     * @param chain цепочка делегирования фильтров
+     * @return
+     */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String path = exchange.getRequest().getPath().value();

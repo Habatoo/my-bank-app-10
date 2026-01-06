@@ -9,7 +9,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class NotificationChassisAutoConfiguration {
 
     @Bean
-    public NotificationClientService notificationClient(WebClient.Builder webClientBuilder) {
-        return new NotificationClientService(webClientBuilder);
+    public NotificationClientService notificationClient(WebClient webClient) {
+        return new NotificationClientService(webClient);
     }
 }
