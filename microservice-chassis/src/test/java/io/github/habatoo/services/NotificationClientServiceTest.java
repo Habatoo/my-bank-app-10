@@ -47,7 +47,7 @@ class NotificationClientServiceTest {
     @BeforeEach
     void setUp() {
         notificationClient = new NotificationClientService(webClient);
-        ReflectionTestUtils.setField(notificationClient, "notificationsUrl", "http://test-url");
+        ReflectionTestUtils.setField(notificationClient, "notificationUrl", "http://test-url");
     }
 
     @Test

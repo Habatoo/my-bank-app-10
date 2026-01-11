@@ -5,6 +5,6 @@ public enum EventType {
     DEPOSIT,         // Пополнение (Cash Service)
     WITHDRAW,        // Снятие (Cash Service)
     TRANSFER,        // Перевод (Transfer Service)
-    UPDATE_PROFILE,  // Редактирование (Accounts Service)
+    UPDATE_PROFILE,  // Редактирование (Account Service)
     VALIDATION_ERROR // Ошибки (Любой сервис)
 }

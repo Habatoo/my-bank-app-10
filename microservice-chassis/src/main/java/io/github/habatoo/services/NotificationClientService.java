@@ -18,8 +18,8 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class NotificationClientService {
 
-    @Value("${spring.application.notifications.url:unknown-service:http://notifications/api/v1/notifications}")
-    private String notificationsUrl;
+    @Value("${spring.application.notification.url:unknown-service:http://notification/api/v1/notification}")
+    private String notificationUrl;
 
     private final WebClient webClient;
 
@@ -32,7 +32,7 @@ public class NotificationClientService {
     public Mono<Void> send(NotificationEvent event) {
         return webClient
                 .post()
-                .uri(notificationsUrl)
+                .uri(notificationUrl)
                 .bodyValue(event)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, response -> {

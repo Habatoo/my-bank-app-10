@@ -43,7 +43,7 @@ class LoggingWebFilterTest {
     @DisplayName("Должен логировать обычный API запрос и вызывать цепочку фильтров")
     void shouldLogApiCallAndContinueChainTest() {
         MockServerWebExchange exchange = MockServerWebExchange.from(
-                MockServerHttpRequest.get("/api/v1/accounts").build()
+                MockServerHttpRequest.get("/api/v1/account").build()
         );
         exchange.getResponse().setStatusCode(HttpStatus.OK);
 
