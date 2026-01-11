@@ -1,0 +1,68 @@
+spring:
+  application:
+    name: gateway
+  main:
+    allow-bean-definition-overriding: true
+
+  config:
+    import: "optional:consul:${CONSUL_HOST:localhost}:8500"
+  cloud:
+    consul:
+      host: ${CONSUL_HOST:localhost}
+      port: 8500
+      discovery:
+        prefer-ip-address: true
+        health-check-path: /actuator/health
+        health-check-interval: 10s
+        instance-id: ${spring.application.name}:${random.value}
+      config:
+        enabled: true
+        format: yaml
+        prefixes: [ config ]
+        defaultContext: application
+        watch:
+          enabled: true
+          delay: 1000
+
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: account-service
+              uri: lb://account
+              predicates:
+                - Path=/api/main/**
+              filters:
+                - RewritePath=/api/main/(?<segment>.*), /$\{segment}
+                - TokenRelay=
+            - id: cash-service
+              uri: lb://cash
+              predicates:
+                - Path=/api/main/**
+              filters:
+                - RewritePath=/api/main/(?<segment>.*), /$\{segment}
+                - TokenRelay=
+            - id: transfer-service
+              uri: lb://transfer
+              predicates:
+                - Path=/api/main/**
+              filters:
+                - RewritePath=/api/main/(?<segment>.*), /$\{segment}
+                - TokenRelay=
+
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            provider: keycloak
+            client-id: front-ui
+            client-secret: ${KEYCLOAK_FRONT_UI_SECRET:90bd600c-7781-4435-961e-1f5139265f7c}
+            authorization-grant-type: authorization_code
+            scope: openid,profile,email
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8082/realms/bank
+
+server:
+  port: 8090

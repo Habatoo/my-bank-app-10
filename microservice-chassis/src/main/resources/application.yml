@@ -1,8 +1,8 @@
 spring:
   application:
     name: template
-    notifications:
-      url: ${NOTIFICATIONS_HOST:http://notifications/api/v1/notifications}
+    notification:
+      url: ${NOTIFICATION_HOST:http://notification/api/v1/notification}
     date: yyyy-MM-dd HH:mm:ss
   config:
     import: "optional:consul:${CONSUL_HOST:localhost}:8500"
@@ -63,24 +63,23 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://${KEYCLOAK_HOST:keycloak}:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+          jwk-set-uri: http://${KEYCLOAK_HOST:keycloak}:8082/realms/${KEYCLOAK_REALM:bank}/protocol/openid-connect/certs
       client:
         registration:
           keycloak:
             provider: keycloak
             client-id: ${spring.application.name}
-            client-secret: ${KEYCLOAK_CLIENT_SECRET}
-            authorization-grant-type: client_credentials
-            scope: openid
         provider:
           keycloak:
-            issuer-uri: http://${KEYCLOAK_HOST:keycloak}:8080/realms/${KEYCLOAK_REALM:bank-realm}
+            issuer-uri: http://${KEYCLOAK_HOST:localhost}:${KEYCLOAK_PORT:8082}/realms/${KEYCLOAK_REALM:bank}
 
 management:
+  server:
+    port: ${server.port}
   endpoints:
     web:
       exposure:
-        include: health,info,refresh,prometheus,metrics
+        include: health,info,refresh,prometheus,metrics,gateway
   endpoint:
     health:
       probes:
@@ -106,5 +105,5 @@ resilience4j:
 
 logging:
   level:
-    org.springframework.cloud.context.scope.refresh: DEBUG
-    io.github.habatoo.configurations: INFO
+    org.springframework.cloud.consul: DEBUG
+    org.springframework.security: DEBUG
