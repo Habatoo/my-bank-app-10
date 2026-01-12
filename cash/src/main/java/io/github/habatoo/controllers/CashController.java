@@ -18,7 +18,6 @@ public class CashController {
     @GetMapping("/cash")
     public Mono<AccountDto> getMyAccount(@AuthenticationPrincipal Jwt jwt) {
         String username = jwt.getClaimAsString("preferred_username");
-        //log.info("preferred_username {}", username);
 
         return Mono.just(new AccountDto());
     }

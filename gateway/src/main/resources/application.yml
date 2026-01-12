@@ -28,13 +28,17 @@ spring:
       server:
         webflux:
           routes:
+            - id: registration-route
+              uri: lb://account
+              predicates:
+                - Path=/api/account/register
             - id: account-service
               uri: lb://account
               predicates:
-                - Path=/api/main/**
+                - Path=/api/**
               filters:
-                - RewritePath=/api/main/(?<segment>.*), /$\{segment}
                 - TokenRelay=
+                - StripPrefix=1
             - id: cash-service
               uri: lb://cash
               predicates:
@@ -52,6 +56,9 @@ spring:
 
   security:
     oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://${KEYCLOAK_HOST:localhost}:8082/realms/${KEYCLOAK_REALM:bank}/protocol/openid-connect/certs
       client:
         registration:
           keycloak:

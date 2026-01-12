@@ -105,5 +105,7 @@ resilience4j:
 
 logging:
   level:
-    org.springframework.cloud.consul: DEBUG
+    org.springframework.cloud.gateway: TRACE
     org.springframework.security: DEBUG
+    org.springframework.http.server.reactive: DEBUG
+    reactor.netty.http.client: DEBUG

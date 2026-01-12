@@ -21,9 +21,10 @@ services:
       start-dev --import-realm --http-port=8082 --http-enabled=true 
       --hostname-strict=false 
       --proxy-headers=xforwarded
-    env_file: .env
+    env_file: ./env/.env
     volumes:
-      - ./realm-export.json:/opt/keycloak/data/import/realm.json
+      - ./env/realm-export.json:/opt/keycloak/data/import/realm.json:ro
+      - ./env/keycloak-theme/bank-theme:/opt/keycloak/themes/bank-theme:ro
     ports:
       - "8082:8082"
     healthcheck:
@@ -38,7 +39,7 @@ services:
     image: postgres:17-alpine
     container_name: account-db
     restart: unless-stopped
-    env_file: .env
+    env_file: ./env/.env
     environment:
       POSTGRES_DB: ${DB_ACCOUNT_NAME}
       POSTGRES_USER: ${DB_USER_NAME}
@@ -59,7 +60,7 @@ services:
     image: postgres:17-alpine
     container_name: cash-db
     restart: unless-stopped
-    env_file: .env
+    env_file: ./env/.env
     environment:
       POSTGRES_DB: ${DB_CASH_NAME}
       POSTGRES_USER: ${DB_USER_NAME}
@@ -80,7 +81,7 @@ services:
     image: postgres:17-alpine
     container_name: notification-db
     restart: unless-stopped
-    env_file: .env
+    env_file: ./env/.env
     environment:
       POSTGRES_DB: ${DB_NOTIFICATION_NAME}
       POSTGRES_USER: ${DB_USER_NAME}
@@ -101,7 +102,7 @@ services:
     image: postgres:17-alpine
     container_name: transfer-db
     restart: unless-stopped
-    env_file: .env
+    env_file: ./env/.env
     environment:
       POSTGRES_DB: ${DB_TRANSFER_NAME}
       POSTGRES_USER: ${DB_USER_NAME}

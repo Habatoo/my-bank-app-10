@@ -14,28 +14,40 @@ import org.springframework.web.reactive.function.client.WebClient;
 @AutoConfiguration
 public class WebClientChassisAutoConfiguration {
 
-    /**
-     * Балансируемый билдер с возможностью понимать имена сервисов.
-     */
     @Bean
     @LoadBalanced
     public WebClient.Builder loadBalancedWebClientBuilder() {
         return WebClient.builder();
     }
 
-    /**
-     * Итоговый WebClient.
-     */
     @Bean
     public WebClient webClient(WebClient.Builder loadBalancedWebClientBuilder,
                                ReactiveClientRegistrationRepository clientRegistrations,
                                ServerOAuth2AuthorizedClientRepository authorizedClients) {
 
+        return loadBalancedWebClientBuilder
+                .filter(createOauthFilter(clientRegistrations, authorizedClients))
+                .build();
+    }
+
+    @Bean
+    public WebClient simpleWebClient(ReactiveClientRegistrationRepository clientRegistrations,
+                                     ServerOAuth2AuthorizedClientRepository authorizedClients) {
+        return WebClient.builder()
+                .filter(createOauthFilter(clientRegistrations, authorizedClients))
+                .build();
+    }
+
+    private ServerOAuth2AuthorizedClientExchangeFilterFunction createOauthFilter(
+            ReactiveClientRegistrationRepository clientRegistrations,
+            ServerOAuth2AuthorizedClientRepository authorizedClients) {
+
         var oauth = new ServerOAuth2AuthorizedClientExchangeFilterFunction(clientRegistrations, authorizedClients);
+
         oauth.setDefaultClientRegistrationId("keycloak");
 
-        return loadBalancedWebClientBuilder
-                .filter(oauth)
-                .build();
+        oauth.setDefaultOAuth2AuthorizedClient(true);
+
+        return oauth;
     }
 }
