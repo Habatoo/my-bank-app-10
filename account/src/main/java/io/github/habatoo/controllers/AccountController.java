@@ -1,6 +1,6 @@
 package io.github.habatoo.controllers;
 
-import io.github.habatoo.dto.AccountDto;
+import io.github.habatoo.dto.AccountFullResponseDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -10,28 +10,47 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @RestController
 public class AccountController {
 
-    /**
-     * GET /user - страница пользователя.
-     *
-     * @return dto пользователя
-     */
     @GetMapping("/user")
-    public Mono<AccountDto> getMyAccount(@AuthenticationPrincipal Jwt jwt) {
-        String username = jwt.getClaimAsString("preferred_username");
-        String fullName = jwt.getClaimAsString("name");
+    public Mono<AccountFullResponseDto> getMyAccount(@AuthenticationPrincipal Jwt jwt) {
+        String login = jwt.getClaimAsString("preferred_username");
+        String name = jwt.getClaimAsString("name");
+        String externalId = jwt.getSubject();
 
-        log.info("Fetching account for user: {}", username);
+        log.info("Fetching combined data for login: {}, subject: {}", login, externalId);
 
-        AccountDto account = new AccountDto();
-        account.setName(fullName != null ? fullName : username);
-        account.setBirthdate(LocalDate.of(1990, 1, 1));
-        account.setBalance(BigDecimal.valueOf(50000));
+        AccountFullResponseDto response = AccountFullResponseDto.builder()
+                .login(login != null ? login : "user_login")
+                .name(name != null ? name : "Имя не указано")
+                .birthDate(LocalDate.of(1990, 1, 1))
+                .accountId(UUID.randomUUID())
+                .balance(new BigDecimal("50000.0000"))
+                .version(0L)
+                .build();
 
-        return Mono.just(account);
+        return Mono.just(response);
+    }
+
+    @GetMapping("/users")
+    public Mono<List<AccountFullResponseDto>> getAllAccount() {
+
+        log.info("Fetching all data ");
+
+        AccountFullResponseDto response = AccountFullResponseDto.builder()
+                .login("other_user_login")
+                .name("other user")
+                .birthDate(LocalDate.of(1995, 5, 5))
+                .accountId(UUID.randomUUID())
+                .balance(new BigDecimal("22000.0000"))
+                .version(0L)
+                .build();
+
+        return Mono.just(List.of(response));
     }
 }

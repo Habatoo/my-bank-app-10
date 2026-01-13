@@ -10,7 +10,7 @@ import java.math.BigDecimal;
  * поля ввода суммы снятия (обязательно для заполнения);
  * кнопок «Положить» и «Снять» (если сумма, которую нужно снять, больше суммы на счёте, то появляется ошибка).
  */
-public interface AccountService {
+public interface CashService {
 
     /**
      * Пополнит счет.

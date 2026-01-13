@@ -35,24 +35,24 @@ spring:
             - id: account-service
               uri: lb://account
               predicates:
-                - Path=/api/**
+                - Path=/api/main/user, /api/main/users
               filters:
                 - TokenRelay=
-                - StripPrefix=1
+                - StripPrefix=2
             - id: cash-service
               uri: lb://cash
               predicates:
-                - Path=/api/main/**
+                - Path=/api/main/cash
               filters:
-                - RewritePath=/api/main/(?<segment>.*), /$\{segment}
                 - TokenRelay=
+                - StripPrefix=2
             - id: transfer-service
               uri: lb://transfer
               predicates:
-                - Path=/api/main/**
+                - Path=/api/main/transfer
               filters:
-                - RewritePath=/api/main/(?<segment>.*), /$\{segment}
                 - TokenRelay=
+                - StripPrefix=2
 
   security:
     oauth2:

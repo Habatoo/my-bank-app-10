@@ -1,9 +1,21 @@
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    login VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    birth_date DATE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS account (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(200) NOT NULL UNIQUE,
-    birth_date DATE NOT NULL,
+    user_id UUID NOT NULL,
     balance DECIMAL(19, 4) DEFAULT 0.0000,
-    version BIGINT DEFAULT 0
+    version BIGINT DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS outbox (
@@ -14,11 +26,20 @@ CREATE TABLE IF NOT EXISTS outbox (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-COMMENT ON COLUMN account.id IS 'Внутренний UUID, не меняется, не отображается в UI';
-COMMENT ON COLUMN account.name IS 'Имя пользователя (логин - Фамилия и Имя, согласно ТЗ хранятся вместе)';
-COMMENT ON COLUMN account.birth_date IS 'Дата рождения (используется для валидации 18+ на уровне бизнес-логики)';
-COMMENT ON COLUMN account.balance IS 'Текущая сумма на счете';
-COMMENT ON COLUMN account.version IS 'Поле для оптимистической блокировки (предотвращение конфликтов при обновлении баланса)';
+COMMENT ON COLUMN users.id IS 'Системный идентификатор (PK). Используется для внешних связей, не подлежит изменению';
+COMMENT ON COLUMN users.login IS 'Уникальный логин пользователя для входа в систему и идентификации в UI';
+COMMENT ON COLUMN users.name IS 'Полное имя (ФИО). Используется для отображения в интерфейсе и документах';
+COMMENT ON COLUMN users.birth_date IS 'Дата рождения. Необходима для проверки возрастных ограничений (18+)';
+COMMENT ON COLUMN users.created_at IS 'Метка времени создания записи (регистрация пользователя)';
+COMMENT ON COLUMN users.updated_at IS 'Метка времени последнего изменения профиля пользователя';
+
+COMMENT ON TABLE account IS 'Таблица финансовых счетов пользователей';
+COMMENT ON COLUMN account.id IS 'Технический идентификатор счета (PK)';
+COMMENT ON COLUMN account.user_id IS 'Внешний ключ (FK) для связи со справочником пользователей';
+COMMENT ON COLUMN account.balance IS 'Текущий остаток денежных средств. Точность 4 знака после запятой для избежания ошибок округления';
+COMMENT ON COLUMN account.version IS 'Счетчик версий для механизма Optimistic Locking (защита от Double Spend)';
+COMMENT ON COLUMN account.created_at IS 'Метка времени открытия счета';
+COMMENT ON COLUMN account.updated_at IS 'Метка времени последней финансовой операции по счету или изменения метаданных';
 
 COMMENT ON COLUMN outbox.id IS 'id события';
 COMMENT ON COLUMN outbox.event_type IS 'Тип события';
@@ -26,5 +47,5 @@ COMMENT ON COLUMN outbox.payload IS 'Данные события в формат
 COMMENT ON COLUMN outbox.status IS 'Статус отправки: NEW (новое), PROCESSED (отправлено в Notification';
 COMMENT ON COLUMN outbox.created_at IS 'Дата события';
 
-CREATE INDEX idx_account_name ON account(name);
+CREATE INDEX idx_users_name ON users(name);
 CREATE INDEX idx_outbox_status ON outbox(status) WHERE status = 'NEW';

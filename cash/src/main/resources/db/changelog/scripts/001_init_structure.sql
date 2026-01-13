@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS outbox (
 COMMENT ON COLUMN operations.id IS 'id пользователя, совершившего действие';
 COMMENT ON COLUMN operations.username IS 'Логин пользователя, совершившего действие';
 COMMENT ON COLUMN operations.amount IS 'Сумма операции';
-COMMENT ON COLUMN operations.operation_type IS 'Тип операции: PUT (положить) или TAKE (снять)';
+COMMENT ON COLUMN operations.operation_type IS 'Тип операции: PUT (положить) или GET (снять)';
 COMMENT ON COLUMN operations.created_at IS 'Дата операции';
 
 COMMENT ON COLUMN outbox.id IS 'id события';
