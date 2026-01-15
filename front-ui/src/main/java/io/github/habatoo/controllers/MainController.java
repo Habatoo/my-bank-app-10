@@ -3,8 +3,10 @@ package io.github.habatoo.controllers;
 import io.github.habatoo.dto.AccountFullResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,7 +24,7 @@ import java.util.List;
 public class MainController {
 
     private final WebClient webClient;
-    private static final String BASE_URL = "http://gateway/api";
+    private static final String BASE_GATEWAY_URL = "http://gateway/api";
 
     @GetMapping("/")
     public Mono<RedirectView> getMainPage() {
@@ -31,8 +33,18 @@ public class MainController {
 
     @GetMapping("/main")
     public Mono<Rendering> showMainPage(
+            @AuthenticationPrincipal OAuth2User principal,
             @RequestParam(required = false) String info,
             @RequestParam(required = false) String error) {
+
+        if (principal != null) {
+            log.trace("User attributes from Keycloak: {}", principal.getAttributes());
+
+            String birthdate = (String) principal.getAttributes().get("birthdate");
+            String initialSum = (String) principal.getAttributes().get("initialSum");
+
+            log.trace("Extracted - Birthdate: {}, InitialSum: {}", birthdate, initialSum);
+        }
 
         return Mono.zip(fetchAccountData(), fetchAllAccounts())
                 .map(tuple -> Rendering.view("main")
@@ -50,9 +62,9 @@ public class MainController {
         return ReactiveSecurityContextHolder.getContext()
                 .map(SecurityContext::getAuthentication)
                 .flatMap(auth -> {
-                    log.info("Sending GET request to: {}/main/user", BASE_URL);
+                    log.info("Sending GET request to: {}/main/user", BASE_GATEWAY_URL);
                     return webClient.get()
-                            .uri(BASE_URL + "/main/user")
+                            .uri(BASE_GATEWAY_URL + "/main/user")
                             .retrieve()
                             .bodyToMono(AccountFullResponseDto.class);
                 });
@@ -62,7 +74,7 @@ public class MainController {
         return ReactiveSecurityContextHolder.getContext()
                 .map(SecurityContext::getAuthentication)
                 .flatMapMany(auth -> webClient.get()
-                        .uri(BASE_URL + "/main/users")
+                        .uri(BASE_GATEWAY_URL + "/main/users")
                         .retrieve()
                         .bodyToFlux(AccountFullResponseDto.class))
                 .collectList()

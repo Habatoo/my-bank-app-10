@@ -34,7 +34,7 @@
             <input type="text" class="form-control" name="username" id="username" value="${(register.formData.username!'')}" placeholder="ivanov_ivan" required>
         </div>
 
-        <#--firstName мапим на поле 'name' в вашем DTO -->
+        <#--firstName мапим на поле 'name' -->
         <div class="mb-3">
             <label class="form-label small">Полное имя</label>
             <input type="text" class="form-control" name="firstName" id="firstName" value="${(register.formData.firstName!'')}" placeholder="Иванов Иван" required>
@@ -64,7 +64,7 @@
             <input type="password" class="form-control" name="password-confirm" id="password-confirm" placeholder="••••••••" required>
         </div>
 
-        <#-- Баланс как кастомный атрибут. В DTO он называется 'sum' или 'balance' -->
+        <#-- Баланс как кастомный атрибут. В DTO 'balance' -->
         <div class="mb-4">
             <label class="form-label small">Начальный баланс, ₽</label>
             <input type="number" class="form-control" name="user.attributes.initialSum" id="initialSum" value="${(register.formData['user.attributes.initialSum']!'0')}" min="0">

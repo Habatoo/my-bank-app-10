@@ -1,17 +1,16 @@
 package io.github.habatoo.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Data
-@Builder
-@NoArgsConstructor
 @AllArgsConstructor
-public class TransferDto {
+public class UserRegistrationDto {
     private String login;
-    private BigDecimal value;
+    private String name;
+    private LocalDate birthDate;
+    private BigDecimal initialSum;
 }

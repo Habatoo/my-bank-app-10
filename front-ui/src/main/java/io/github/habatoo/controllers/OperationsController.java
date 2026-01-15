@@ -2,24 +2,30 @@ package io.github.habatoo.controllers;
 
 import io.github.habatoo.dto.CashDto;
 import io.github.habatoo.dto.TransferDto;
-import io.github.habatoo.dto.UserDto;
+import io.github.habatoo.dto.UserUpdateDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.result.view.RedirectView;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 
 @Slf4j
 @Controller
 @RequiredArgsConstructor
 public class OperationsController {
+
     private final WebClient webClient;
+    private static final String BASE_GATEWAY_URL = "http://gateway/api";
 
     @PostMapping("/cash")
     public Mono<String> handleCash(@ModelAttribute CashDto cashDto) {
@@ -74,7 +80,33 @@ public class OperationsController {
     }
 
     @PostMapping("/account")
-    public Mono<String> updateAccount(@ModelAttribute UserDto userDto) {
-        return Mono.just("redirect:/main?info=Профиль обновлен");
+    public Mono<RedirectView> updateProfile(ServerWebExchange exchange) {
+        return exchange.getFormData()
+                .flatMap(formData -> {
+                    String name = formData.getFirst("name");
+                    String birthDateStr = formData.getFirst("birthdate");
+
+                    if (name == null || birthDateStr == null) {
+                        return Mono.just(new RedirectView("/main?error=MissingFields"));
+                    }
+
+                    UserUpdateDto updateDto = new UserUpdateDto(name, LocalDate.parse(birthDateStr));
+
+                    return webClient.patch()
+                            .uri(BASE_GATEWAY_URL + "/account/update")
+                            .bodyValue(updateDto)
+                            .retrieve()
+                            .toBodilessEntity()
+                            .map(response -> {
+                                String info = UriComponentsBuilder.fromPath("")
+                                        .queryParam("info", "Профиль обновлен")
+                                        .build().encode().toUriString();
+                                return new RedirectView("/main" + info);
+                            })
+                            .onErrorResume(e -> {
+                                log.error("Update error: ", e);
+                                return Mono.just(new RedirectView("/main?error=UpdateFailed"));
+                            });
+                });
     }
 }

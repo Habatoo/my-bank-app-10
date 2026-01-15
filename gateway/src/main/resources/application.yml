@@ -35,7 +35,7 @@ spring:
             - id: account-service
               uri: lb://account
               predicates:
-                - Path=/api/main/user, /api/main/users
+                - Path=/api/main/user, /api/main/users, /api/account/update, /api/account/balance
               filters:
                 - TokenRelay=
                 - StripPrefix=2

@@ -9,7 +9,7 @@ import java.util.UUID;
 public class OutboxDto {
     private UUID id;
     private String eventType;
-    private JsonNode payload; // Используем JsonNode для гибкости JSONB
+    private JsonNode payload;
     private String status;
     private LocalDateTime createdAt;
 }
