@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS transfers (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     sender_username VARCHAR(50) NOT NULL,
     target_username VARCHAR(50) NOT NULL,
     amount DECIMAL(19, 4) NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS transfers (
 );
 
 CREATE TABLE IF NOT EXISTS outbox (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_type VARCHAR(50) NOT NULL,
     payload JSONB NOT NULL,
     status VARCHAR(20) DEFAULT 'NEW',

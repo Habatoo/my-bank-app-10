@@ -68,13 +68,22 @@ public class OperationsController {
                         .scheme("http")
                         .host("gateway")
                         .path("/api/main/transfer")
+                        .queryParam("account", transferDto.getLogin())
                         .queryParam("value", transferDto.getValue())
                         .build())
                 .bodyValue(transferDto)
                 .retrieve()
-                .bodyToMono(Void.class)
-                .then(Mono.just("redirect:/main?info=" + URLEncoder.encode(
-                        "Перевод выполнен", StandardCharsets.UTF_8)))
+                .bodyToMono(new ParameterizedTypeReference<OperationResultDto<TransferDto>>() {
+                })
+                .map(result -> {
+                    if (result.isSuccess()) {
+                        String msg = "Перевод пользователю + " + transferDto.getLogin() +
+                                " на сумму " + transferDto.getValue() + " ₽ выполнено успешно";
+                        return "redirect:/main?info=" + URLEncoder.encode(msg, StandardCharsets.UTF_8);
+                    } else {
+                        return "redirect:/main?error=" + URLEncoder.encode(result.getMessage(), StandardCharsets.UTF_8);
+                    }
+                })
                 .onErrorResume(e -> {
                     log.error("Transfer error: {}", e.getMessage());
                     return Mono.just("redirect:/main?error=" + URLEncoder.encode(

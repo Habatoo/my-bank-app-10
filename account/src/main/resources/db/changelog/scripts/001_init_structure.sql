@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS account (
 );
 
 CREATE TABLE IF NOT EXISTS outbox (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_type VARCHAR(50) NOT NULL,
     payload JSONB NOT NULL,
     status VARCHAR(20) DEFAULT 'NEW',

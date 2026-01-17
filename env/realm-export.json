@@ -139,13 +139,26 @@
       "username": "user",
       "enabled": true,
       "email": "user@example.com",
-      "firstName": "Bank",
+      "firstName": "Bank User",
       "lastName": "User",
       "attributes": {
         "initialSum": ["1000.00"],
         "birthdate": ["1990-01-01"]
       },
-      "credentials": [{ "type": "password", "value": "password", "temporary": false }],
+      "credentials": [{ "type": "user", "value": "user", "temporary": false }],
+      "realmRoles": ["USER"]
+    },
+    {
+      "username": "customer",
+      "enabled": true,
+      "email": "customer@example.com",
+      "firstName": "Bank Customer",
+      "lastName": "customer",
+      "attributes": {
+        "initialSum": ["3000.00"],
+        "birthdate": ["1982-02-01"]
+      },
+      "credentials": [{ "type": "customer", "value": "customer", "temporary": false }],
       "realmRoles": ["USER"]
     }
   ],

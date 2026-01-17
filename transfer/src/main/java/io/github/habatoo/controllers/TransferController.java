@@ -1,6 +1,9 @@
 package io.github.habatoo.controllers;
 
+import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.dto.TransferDto;
+import io.github.habatoo.services.TransferService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -13,23 +16,31 @@ import java.math.BigDecimal;
 
 @Slf4j
 @RestController
+@RequiredArgsConstructor
 public class TransferController {
 
+    private final TransferService transferService;
+
     @PostMapping("/transfer")
-    public Mono<TransferDto> updateBalance(
+    public Mono<OperationResultDto<TransferDto>> updateBalance(
             @RequestParam("value") BigDecimal value,
+            @RequestParam("account") String targetLogin,
             @AuthenticationPrincipal Jwt jwt) {
 
-        String login = jwt.getClaimAsString("preferred_username");
-        String name = jwt.getClaimAsString("name");
+        String senderLogin = jwt.getClaimAsString("preferred_username");
 
-        log.info("API TRANSFER: Processing value {} for user {}", value, name);
+        if (value == null || value.compareTo(BigDecimal.ZERO) <= 0) {
+            return Mono.just(OperationResultDto.<TransferDto>builder()
+                    .success(false)
+                    .message("Сумма перевода должна быть больше нуля")
+                    .build());
+        }
 
-        TransferDto responseDto = TransferDto.builder()
-                .login(login)
+        TransferDto transferDto = TransferDto.builder()
+                .login(targetLogin)
                 .value(value)
                 .build();
 
-        return Mono.just(responseDto);
+        return transferService.processTransferOperation(senderLogin, transferDto);
     }
 }
