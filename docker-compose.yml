@@ -25,6 +25,7 @@ services:
     volumes:
       - ./env/realm-export.json:/opt/keycloak/data/import/realm.json:ro
       - ./env/keycloak-theme/bank-theme:/opt/keycloak/themes/bank-theme:ro
+      - keycloak_data:/opt/keycloak/data
     ports:
       - "8082:8082"
     healthcheck:
@@ -124,6 +125,7 @@ volumes:
   cash_db_data:
   notification_db_data:
   transfer_db_data:
+  keycloak_data:
 
 networks:
   bank-network:

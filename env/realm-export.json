@@ -74,7 +74,8 @@
             "access.token.claim": "true",
             "userinfo.token.claim": "true",
             "jsonType.label": "String",
-            "multivalued": "false"
+            "multivalued": "false",
+            "aggregate.attrs": "true"
           }
         },
         {
@@ -88,7 +89,8 @@
             "access.token.claim": "true",
             "userinfo.token.claim": "true",
             "jsonType.label": "String",
-            "multivalued": "false"
+            "multivalued": "false",
+            "aggregate.attrs": "true"
           }
         }
       ],
@@ -151,6 +153,8 @@
   "registrationFlow": "registration",
   "attributes": {
     "userProfileEnabled": "true",
-    "userProfileConfig": "{\"attributes\":[{\"name\":\"birthdate\",\"displayName\":\"Дата рождения\",\"validations\":{\"local-date\":{}},\"annotations\":{\"inputType\":\"date\"},\"defaultValue\":\"1970-01-01\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"selector\":{\"scopes\":[\"openid\"]}},{\"name\":\"initialSum\",\"displayName\":\"Начальный баланс\",\"validations\":{\"pattern\":{\"pattern\":\"^[0-9]+(\\\\.[0-9]{1,2})?$\"}},\"defaultValue\":\"0.00\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"selector\":{\"scopes\":[\"openid\"]}}]}"
+    "userProfileConfig": "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"birthdate\",\"displayName\":\"Дата рождения\",\"validations\":{\"not-empty\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"annotations\":{\"inputType\":\"date\"}},{\"name\":\"initialSum\",\"displayName\":\"Начальная сумма\",\"validations\":{\"not-empty\":{},\"double\":{\"min\":0.0}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"annotations\":{\"inputType\":\"number\"}}],\"groups\":[],\"unmanagedAttributePolicy\":\"ENABLED\"}",
+    "realm_client": "false",
+    "post.logout.redirect.uris": "+"
   }
 }

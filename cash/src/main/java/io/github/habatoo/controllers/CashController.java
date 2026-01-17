@@ -2,10 +2,14 @@ package io.github.habatoo.controllers;
 
 import io.github.habatoo.dto.CashDto;
 import io.github.habatoo.dto.enums.OperationType;
+import io.github.habatoo.services.CashService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
@@ -15,7 +19,10 @@ import java.util.UUID;
 
 @Slf4j
 @RestController
+@RequiredArgsConstructor
 public class CashController {
+
+    private final CashService cashService;
 
     @PostMapping("/cash")
     public Mono<CashDto> updateBalance(
@@ -23,24 +30,18 @@ public class CashController {
             @RequestParam("action") String action,
             @AuthenticationPrincipal Jwt jwt) {
 
+        String login = jwt.getClaimAsString("preferred_username");
         String userIdStr = jwt.getSubject();
-        log.info("API CALL: Processing action {} value {} for user {}", action, value, userIdStr);
 
-        OperationType operationType;
-        try {
-            operationType = OperationType.valueOf(action.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            log.error("Invalid action received: {}", action);
-            return Mono.error(new IllegalArgumentException("Неверный тип операции: " + action));
-        }
+        OperationType operationType = OperationType.valueOf(action.toUpperCase());
 
-        CashDto responseDto = CashDto.builder()
+        CashDto cashDto = CashDto.builder()
                 .userId(UUID.fromString(userIdStr))
                 .action(operationType)
                 .value(value)
                 .createdAt(OffsetDateTime.now(ZoneOffset.UTC))
                 .build();
 
-        return Mono.just(responseDto);
+        return cashService.processCashOperation(login, cashDto);
     }
 }

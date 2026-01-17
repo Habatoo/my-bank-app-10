@@ -2,6 +2,7 @@ package io.github.habatoo.services.impl;
 
 import io.github.habatoo.dto.AccountFullResponseDto;
 import io.github.habatoo.dto.AccountShortDto;
+import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.repositories.AccountRepository;
 import io.github.habatoo.repositories.UserRepository;
 import io.github.habatoo.services.AccountService;
@@ -43,18 +44,31 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     @Transactional
-    public Mono<Void> changeBalance(String login, BigDecimal delta) {
+    public Mono<OperationResultDto<Void>> changeBalance(String login, BigDecimal delta) {
         return userRepository.findByLogin(login)
                 .flatMap(user -> accountRepository.findByUserId(user.getId()))
-                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found")))
                 .flatMap(acc -> {
                     BigDecimal newBalance = acc.getBalance().add(delta);
+
                     if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
-                        return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient funds"));
+                        return Mono.just(OperationResultDto.<Void>builder()
+                                .success(false)
+                                .errorCode("INSUFFICIENT_FUNDS")
+                                .message("Недостаточно средств на счете")
+                                .build());
                     }
+
                     acc.setBalance(newBalance);
-                    return accountRepository.save(acc);
+                    return accountRepository.save(acc)
+                            .thenReturn(OperationResultDto.<Void>builder()
+                                    .success(true)
+                                    .message("Баланс обновлен")
+                                    .build());
                 })
-                .then();
+                .switchIfEmpty(Mono.just(OperationResultDto.<Void>builder()
+                        .success(false)
+                        .errorCode("ACCOUNT_NOT_FOUND")
+                        .message("Счет не найден")
+                        .build()));
     }
 }
