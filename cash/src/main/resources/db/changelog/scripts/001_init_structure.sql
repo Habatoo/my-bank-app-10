@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS operations (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(50) NOT NULL,
     amount DECIMAL(19, 4) NOT NULL,
     operation_type VARCHAR(10) NOT NULL,

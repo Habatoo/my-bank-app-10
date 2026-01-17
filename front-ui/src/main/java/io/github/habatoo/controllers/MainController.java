@@ -37,25 +37,21 @@ public class MainController {
             @RequestParam(required = false) String info,
             @RequestParam(required = false) String error) {
 
-        if (principal != null) {
-            log.trace("User attributes from Keycloak: {}", principal.getAttributes());
+        return fetchAccountData()
+                .zipWith(fetchAllAccounts())
+                .map(tuple -> {
+                    AccountFullResponseDto account = tuple.getT1();
 
-            String birthdate = (String) principal.getAttributes().get("birthdate");
-            String initialSum = (String) principal.getAttributes().get("initialSum");
-
-            log.trace("Extracted - Birthdate: {}, InitialSum: {}", birthdate, initialSum);
-        }
-
-        return Mono.zip(fetchAccountData(), fetchAllAccounts())
-                .map(tuple -> Rendering.view("main")
-                        .modelAttribute("account", tuple.getT1())
-                        .modelAttribute("name", tuple.getT1().getName())
-                        .modelAttribute("birthdate", tuple.getT1().getBirthDate())
-                        .modelAttribute("sum", tuple.getT1().getBalance())
-                        .modelAttribute("accounts", tuple.getT2())
-                        .modelAttribute("info", info)
-                        .modelAttribute("errors", error != null ? List.of(error) : null)
-                        .build());
+                    return Rendering.view("main")
+                            .modelAttribute("account", account)
+                            .modelAttribute("name", account.getName())
+                            .modelAttribute("birthdate", account.getBirthDate())
+                            .modelAttribute("sum", account.getBalance())
+                            .modelAttribute("accounts", tuple.getT2())
+                            .modelAttribute("info", info)
+                            .modelAttribute("errors", error != null ? List.of(error) : null)
+                            .build();
+                });
     }
 
     private Mono<AccountFullResponseDto> fetchAccountData() {

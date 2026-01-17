@@ -1,6 +1,7 @@
 package io.github.habatoo.controllers;
 
 import io.github.habatoo.dto.CashDto;
+import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.dto.enums.OperationType;
 import io.github.habatoo.services.CashService;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,7 @@ public class CashController {
     private final CashService cashService;
 
     @PostMapping("/cash")
-    public Mono<CashDto> updateBalance(
+    public Mono<OperationResultDto<CashDto>> updateBalance(
             @RequestParam("value") BigDecimal value,
             @RequestParam("action") String action,
             @AuthenticationPrincipal Jwt jwt) {
