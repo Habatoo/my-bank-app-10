@@ -22,7 +22,6 @@ import reactor.core.publisher.Mono;
  * персональных данных пользователя.
  * </p>
  */
-
 @Slf4j
 @Controller
 @RequiredArgsConstructor

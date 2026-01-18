@@ -17,7 +17,6 @@ import java.nio.charset.StandardCharsets;
 
 import static io.github.habatoo.dto.enums.OperationType.PUT;
 
-
 /**
  * {@inheritDoc}
  */
