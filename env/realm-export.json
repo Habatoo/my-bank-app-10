@@ -139,7 +139,7 @@
       "username": "user",
       "enabled": true,
       "email": "user@example.com",
-      "firstName": "Bank User",
+      "firstName": "User",
       "lastName": "User",
       "attributes": {
         "initialSum": ["1000.00"],
@@ -152,8 +152,8 @@
       "username": "customer",
       "enabled": true,
       "email": "customer@example.com",
-      "firstName": "Bank Customer",
-      "lastName": "customer",
+      "firstName": "Customer",
+      "lastName": "Customer",
       "attributes": {
         "initialSum": ["3000.00"],
         "birthdate": ["1982-02-01"]

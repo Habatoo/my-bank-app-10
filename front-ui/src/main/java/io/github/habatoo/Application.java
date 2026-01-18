@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration;
+import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
 
 @SpringBootApplication(exclude = {
         DataSourceAutoConfiguration.class,
@@ -15,6 +16,7 @@ import org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration;
         HibernateJpaAutoConfiguration.class,
         LiquibaseAutoConfiguration.class
 })
+@EnableR2dbcRepositories(basePackages = "io.github.habatoo.services")
 public class Application {
 
     public static void main(String[] args) {
