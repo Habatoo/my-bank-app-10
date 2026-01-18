@@ -18,7 +18,7 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class NotificationClientService {
 
-    @Value("${spring.application.notification.url:unknown-service:http://notification/api/v1/notification}")
+    @Value("${spring.application.notification.url:http://notification/notification}")
     private String notificationUrl;
 
     private final WebClient webClient;
@@ -36,10 +36,15 @@ public class NotificationClientService {
                 .bodyValue(event)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, response -> {
-                    log.error("Ошибка при отправке уведомления: {}", response.statusCode());
-                    return Mono.empty();
+                    return response.bodyToMono(String.class)
+                            .flatMap(errorBody -> {
+                                log.error("Ошибка при отправке уведомления. Статус: {}, Тело: {}",
+                                        response.statusCode(), errorBody);
+                                return Mono.empty();
+                            });
                 })
-                .bodyToMono(Void.class)
-                .doOnSuccess(v -> log.debug("Уведомление успешно отправлено"));
+                .toBodilessEntity()
+                .doOnSuccess(v -> log.debug("Уведомление успешно доставлено в модуль уведомлений"))
+                .then();
     }
 }

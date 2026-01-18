@@ -2,27 +2,32 @@ package io.github.habatoo.services.impl;
 
 import io.github.habatoo.dto.AccountFullResponseDto;
 import io.github.habatoo.dto.AccountShortDto;
+import io.github.habatoo.dto.NotificationEvent;
 import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.enums.EventStatus;
+import io.github.habatoo.dto.enums.EventType;
 import io.github.habatoo.repositories.AccountRepository;
 import io.github.habatoo.repositories.UserRepository;
 import io.github.habatoo.services.AccountService;
+import io.github.habatoo.services.NotificationClientService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccountServiceImpl implements AccountService {
+
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
+    private final NotificationClientService notificationClient;
 
     @Override
     public Mono<AccountFullResponseDto> getByLogin(String login) {
@@ -60,6 +65,7 @@ public class AccountServiceImpl implements AccountService {
 
                     acc.setBalance(newBalance);
                     return accountRepository.save(acc)
+                            .then(sendBalanceNotification(login, delta, newBalance))
                             .thenReturn(OperationResultDto.<Void>builder()
                                     .success(true)
                                     .message("Баланс обновлен")
@@ -70,5 +76,30 @@ public class AccountServiceImpl implements AccountService {
                         .errorCode("ACCOUNT_NOT_FOUND")
                         .message("Счет не найден")
                         .build()));
+    }
+
+    private Mono<Void> sendBalanceNotification(String login, BigDecimal delta, BigDecimal currentBalance) {
+        boolean isDeposit = delta.compareTo(BigDecimal.ZERO) >= 0;
+        NotificationEvent event = getNotificationEvent(login, delta, currentBalance, isDeposit);
+
+        return notificationClient.send(event)
+                .doOnError(e -> log.error("Ошибка отправки уведомления для {}: {}", login, e.getMessage()))
+                .onErrorResume(e -> Mono.empty());
+    }
+
+    private NotificationEvent getNotificationEvent(String login, BigDecimal delta, BigDecimal currentBalance, boolean isDeposit) {
+        return NotificationEvent.builder()
+                .username(login)
+                .eventType(isDeposit ? EventType.DEPOSIT : EventType.WITHDRAW)
+                .status(EventStatus.SUCCESS)
+                .message(String.format("Баланс пользователя %s успешно изменен на %s", login, delta))
+                .sourceService("accounts-service")
+                .payload(Map.of(
+                        "amount", delta.abs(),
+                        "totalBalance", currentBalance,
+                        "operationType", isDeposit ? "DEPOSIT" : "WITHDRAWAL",
+                        "currency", "RUB"
+                ))
+                .build();
     }
 }

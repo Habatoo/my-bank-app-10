@@ -2,7 +2,7 @@ spring:
   application:
     name: template
     notification:
-      url: ${NOTIFICATION_HOST:http://notification/api/v1/notification}
+      url: ${NOTIFICATION_HOST:http://notification/notification}
     date: yyyy-MM-dd HH:mm:ss
   config:
     import: "optional:consul:${CONSUL_HOST:localhost}:8500"
