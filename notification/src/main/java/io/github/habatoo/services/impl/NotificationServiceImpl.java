@@ -40,6 +40,7 @@ public class NotificationServiceImpl implements NotificationService {
         switch (event.getEventType()) {
             case REGISTRATION -> sendWelcomeEmail(event);
             case DEPOSIT, WITHDRAW -> sendPushNotification(event);
+            case TRANSFER -> sendTransferNotifications(event);
             case UPDATE_PROFILE -> sendUpdateProfile(event);
             default -> sendUnknownNotification(event);
         }
@@ -52,6 +53,11 @@ public class NotificationServiceImpl implements NotificationService {
 
     private void sendPushNotification(NotificationEvent event) {
         log.info("Push: Изменение баланса на сумму {}", event.getPayload().get("amount"));
+    }
+
+    private void sendTransferNotifications(NotificationEvent event) {
+        log.info("Push: Перевод пользователю {} на сумму {}",
+                event.getPayload().get("target_username"), event.getPayload().get("amount"));
     }
 
     private void sendUpdateProfile(NotificationEvent event) {

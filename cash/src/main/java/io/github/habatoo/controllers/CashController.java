@@ -6,6 +6,7 @@ import io.github.habatoo.dto.enums.OperationType;
 import io.github.habatoo.services.CashService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,6 +27,7 @@ public class CashController {
     private final CashService cashService;
 
     @PostMapping("/cash")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN') or hasRole('CASH_ACCESS')")
     public Mono<OperationResultDto<CashDto>> updateBalance(
             @RequestParam("value") BigDecimal value,
             @RequestParam("action") String action,

@@ -1,11 +1,15 @@
 package io.github.habatoo.services.impl;
 
 import io.github.habatoo.dto.CashDto;
+import io.github.habatoo.dto.NotificationEvent;
 import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.enums.EventStatus;
+import io.github.habatoo.dto.enums.EventType;
 import io.github.habatoo.dto.enums.OperationType;
 import io.github.habatoo.models.Cash;
 import io.github.habatoo.repositories.OperationsRepository;
 import io.github.habatoo.services.CashService;
+import io.github.habatoo.services.NotificationClientService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
@@ -15,6 +19,7 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -24,6 +29,8 @@ public class CashServiceImpl implements CashService {
     private final WebClient webClient;
 
     private final OperationsRepository operationsRepository;
+
+    private final NotificationClientService notificationClient;
 
     @Override
     public Mono<OperationResultDto<CashDto>> processCashOperation(String login, CashDto cashDto) {
@@ -68,7 +75,7 @@ public class CashServiceImpl implements CashService {
                 .build();
 
         return operationsRepository.save(operation)
-                .then(sendNotification(login, cashDto))
+                .then(sendCashNotification(login, cashDto))
                 .thenReturn(OperationResultDto.<CashDto>builder()
                         .success(true)
                         .data(cashDto)
@@ -76,12 +83,33 @@ public class CashServiceImpl implements CashService {
                         .build());
     }
 
-    private Mono<Void> sendNotification(String login, CashDto dto) {
-        String message = String.format("Операция %s на сумму %.2f выполнена успешно",
-                dto.getAction(), dto.getValue());
+    private Mono<Void> sendCashNotification(String login, CashDto dto) {
+        NotificationEvent event = getNotificationEvent(login, dto);
 
-        log.info("Для пользователя {} {}", login, message);
+        return notificationClient.send(event)
+                .doOnError(e -> log.error("Не удалось отправить уведомление для {}: {}", login, e.getMessage()))
+                .onErrorResume(e -> Mono.empty());
+    }
 
-        return Mono.empty();
+    private NotificationEvent getNotificationEvent(String login, CashDto dto) {
+        boolean isDeposit = dto.getAction() == OperationType.PUT;
+        String actionName = isDeposit ? "Внесение" : "Снятие";
+        String message = String.format("%s наличных на сумму %.2f руб. завершено успешно.",
+                actionName, dto.getValue());
+
+        log.info("Cash Service: Отправка подтверждения операции для {}", login);
+
+        return NotificationEvent.builder()
+                .username(login)
+                .eventType(isDeposit ? EventType.DEPOSIT : EventType.WITHDRAW)
+                .status(EventStatus.SUCCESS)
+                .message(message)
+                .sourceService("cash-service")
+                .payload(Map.of(
+                        "amount", dto.getValue(),
+                        "operationType", actionName,
+                        "currency", "RUB"
+                ))
+                .build();
     }
 }
