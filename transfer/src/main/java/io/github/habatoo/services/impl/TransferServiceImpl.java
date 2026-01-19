@@ -71,8 +71,39 @@ public class TransferServiceImpl implements TransferService {
         }
 
         log.error("КРИТИЧЕСКАЯ ОШИБКА: Списано у {}, но не зачислено {}", sender, recipient);
-        // TODO  SAGA
-        return Mono.just(createDepositErrorResponse());
+
+        return compensateWithdrawal(sender, amount)
+                .then(sendCompensatedNotification(sender, amount))
+                .then(Mono.just(createDepositErrorResponse()));
+    }
+
+    /**
+     * Метод компенсации: возвращает деньги отправителю.
+     */
+    private Mono<Void> compensateWithdrawal(String sender, BigDecimal amount) {
+        log.info("Компенсация: Возврат суммы {} пользователю {}", amount, sender);
+        return callAccountService(sender, amount)
+                .flatMap(res -> {
+                    if (!res.isSuccess()) {
+                        log.error("ФАТАЛЬНАЯ ОШИБКА КОМПЕНСАЦИИ: Не удалось вернуть {} пользователю {}", amount, sender);
+                    }
+                    return Mono.empty();
+                });
+    }
+
+    /**
+     * Уведомление пользователя о том, что перевод не удался и деньги возвращены.
+     */
+    private Mono<Void> sendCompensatedNotification(String login, BigDecimal amount) {
+        NotificationEvent event = NotificationEvent.builder()
+                .username(login)
+                .eventType(EventType.TRANSFER)
+                .status(EventStatus.FAILURE)
+                .message(String.format("Перевод не удался. Сумма %.2f возвращена на ваш счет.", amount))
+                .sourceService("transfer-service")
+                .build();
+
+        return notificationClient.send(event).then();
     }
 
     private OperationResultDto<TransferDto> handleWithdrawError(OperationResultDto<Void> res) {
