@@ -5,6 +5,7 @@ import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.services.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,6 +40,7 @@ public class NotificationController {
      * @see NotificationService#processEvent(NotificationEvent)
      */
     @PostMapping("/notification")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN') or hasRole('NOTIFICATION_ACCESS')")
     public Mono<OperationResultDto<Void>> handleNotification(@RequestBody NotificationEvent event) {
         log.debug("Получено событие для уведомления: {}", event);
 

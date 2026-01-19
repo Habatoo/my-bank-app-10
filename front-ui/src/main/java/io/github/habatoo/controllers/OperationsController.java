@@ -7,6 +7,7 @@ import io.github.habatoo.services.TransferService;
 import io.github.habatoo.services.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,6 +39,7 @@ public class OperationsController {
      * @return {@link Mono} со строкой перенаправления на главную страницу с результатом операции.
      */
     @PostMapping("/cash")
+    @PreAuthorize("isAuthenticated()")
     public Mono<String> handleCash(@ModelAttribute CashDto cashDto) {
         log.debug("Обработка операции с наличными: {}", cashDto);
         return cashService.moveMoney(cashDto);
@@ -50,6 +52,7 @@ public class OperationsController {
      * @return {@link Mono} со строкой перенаправления, содержащей сообщение об успехе или ошибке.
      */
     @PostMapping("/transfer")
+    @PreAuthorize("isAuthenticated()")
     public Mono<String> handleTransfer(@ModelAttribute TransferDto transferDto) {
         log.debug("Обработка перевода средств: {}", transferDto);
         return transferService.sendMoney(transferDto);
@@ -66,6 +69,7 @@ public class OperationsController {
      * @return {@link Mono} с объектом {@link RedirectView} для возврата на главную страницу.
      */
     @PostMapping("/account")
+    @PreAuthorize("isAuthenticated()")
     public Mono<RedirectView> updateProfile(ServerWebExchange exchange) {
         log.debug("Запрос на обновление профиля пользователя");
         return userService.updateProfile(exchange);

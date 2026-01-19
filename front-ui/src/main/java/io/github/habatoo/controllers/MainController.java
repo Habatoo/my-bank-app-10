@@ -3,6 +3,7 @@ package io.github.habatoo.controllers;
 import io.github.habatoo.services.FrontService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -47,6 +48,7 @@ public class MainController {
      * @return {@link Mono} с объектом {@link Rendering}, содержащим модель данных и имя шаблона.
      */
     @GetMapping("/main")
+    @PreAuthorize("isAuthenticated()")
     public Mono<Rendering> showMainPage(
             @RequestParam(required = false) String info,
             @RequestParam(required = false) String error) {

@@ -5,6 +5,7 @@ import io.github.habatoo.dto.TransferDto;
 import io.github.habatoo.services.TransferService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +23,7 @@ public class TransferController {
     private final TransferService transferService;
 
     @PostMapping("/transfer")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN') or hasRole('TRANSFER_ACCESS')")
     public Mono<OperationResultDto<TransferDto>> updateBalance(
             @RequestParam("value") BigDecimal value,
             @RequestParam("account") String targetLogin,

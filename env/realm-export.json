@@ -134,6 +134,24 @@
       "fullScopeAllowed": true
     }
   ],
+  "scopeMappings": [
+    {
+      "client": "front-ui",
+      "roles": [ "ACCOUNT_ACCESS", "CASH_ACCESS", "TRANSFER_ACCESS" ]
+    },
+    {
+      "client": "account",
+      "roles": [ "NOTIFICATION_ACCESS" ]
+    },
+    {
+      "client": "cash",
+      "roles": [ "NOTIFICATION_ACCESS" ]
+    },
+    {
+      "client": "transfer",
+      "roles": [ "NOTIFICATION_ACCESS" ]
+    }
+  ],
   "users": [
     {
       "username": "user",
@@ -146,7 +164,13 @@
         "birthdate": ["1990-01-01"]
       },
       "credentials": [{ "type": "user", "value": "user", "temporary": false }],
-      "realmRoles": ["USER"]
+      "realmRoles": [
+        "USER",
+        "ACCOUNT_ACCESS",
+        "CASH_ACCESS",
+        "TRANSFER_ACCESS",
+        "NOTIFICATION_ACCESS"
+      ]
     },
     {
       "username": "customer",
@@ -159,7 +183,13 @@
         "birthdate": ["1982-02-01"]
       },
       "credentials": [{ "type": "customer", "value": "customer", "temporary": false }],
-      "realmRoles": ["USER"]
+      "realmRoles": [
+        "USER",
+        "ACCOUNT_ACCESS",
+        "CASH_ACCESS",
+        "TRANSFER_ACCESS",
+        "NOTIFICATION_ACCESS"
+      ]
     }
   ],
   "browserFlow": "browser",
