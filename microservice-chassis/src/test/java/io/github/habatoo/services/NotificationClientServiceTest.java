@@ -28,6 +28,9 @@ class NotificationClientServiceTest {
     private WebClient webClient;
 
     @Mock
+    private WebClient backgroundWebClient;
+
+    @Mock
     @SuppressWarnings("rawtypes")
     private WebClient.RequestBodyUriSpec requestBodyUriSpec;
 
@@ -46,7 +49,7 @@ class NotificationClientServiceTest {
 
     @BeforeEach
     void setUp() {
-        notificationClient = new NotificationClientService(webClient);
+        notificationClient = new NotificationClientService(webClient, backgroundWebClient);
         ReflectionTestUtils.setField(notificationClient, "notificationUrl", "http://test-url");
     }
 

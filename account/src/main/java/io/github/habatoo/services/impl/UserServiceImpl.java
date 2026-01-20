@@ -9,7 +9,7 @@ import io.github.habatoo.models.Account;
 import io.github.habatoo.models.User;
 import io.github.habatoo.repositories.AccountRepository;
 import io.github.habatoo.repositories.UserRepository;
-import io.github.habatoo.services.NotificationClientService;
+import io.github.habatoo.services.OutboxClientService;
 import io.github.habatoo.services.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,72 +29,55 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
-    private final NotificationClientService notificationClient;
+    private final OutboxClientService outboxClientService;
 
+    @Override
     @Transactional
     public Mono<AccountFullResponseDto> getOrCreateUser(Jwt jwt) {
         String login = jwt.getClaimAsString("preferred_username");
 
         return userRepository.findByLogin(login)
-                .flatMap(user ->
-                        accountRepository.findByUserId(user.getId())
-                                .map(acc -> mapToFullDto(user, acc))
+                .flatMap(user -> accountRepository.findByUserId(user.getId())
+                        .map(acc -> mapToFullDto(user, acc))
                 )
                 .switchIfEmpty(Mono.defer(() -> registerFromToken(jwt)));
     }
 
     @Override
+    @Transactional
     public Mono<AccountFullResponseDto> updateProfile(String login, UserUpdateDto dto) {
         return userRepository.findByLogin(login)
                 .flatMap(user -> {
-                    user.setName(dto.getName());
-                    user.setBirthDate(dto.getBirthDate());
+                    updateUserFields(user, dto);
                     return userRepository.save(user);
                 })
                 .flatMap(user -> accountRepository.findByUserId(user.getId())
-                        .flatMap(acc -> {
-                            AccountFullResponseDto response = mapToFullDto(user, acc);
-                            return sendProfileUpdateNotification(login, dto)
-                                    .thenReturn(response);
-                        }));
+                        .flatMap(acc -> saveUpdateNotification(login, dto)
+                                .thenReturn(mapToFullDto(user, acc))));
     }
 
-    private Mono<Void> sendProfileUpdateNotification(String login, UserUpdateDto dto) {
-        NotificationEvent event = getNotificationEvent(login, dto);
 
-        return notificationClient.send(event)
-                .onErrorResume(e -> Mono.empty());
+    private void updateUserFields(User user, UserUpdateDto dto) {
+        user.setName(dto.getName());
+        user.setBirthDate(dto.getBirthDate());
     }
 
-    private NotificationEvent getNotificationEvent(String login, UserUpdateDto dto) {
-        return NotificationEvent.builder()
+    /**
+     * Формирует и сохраняет событие обновления профиля в Outbox.
+     */
+    private Mono<Void> saveUpdateNotification(String login, UserUpdateDto dto) {
+        return outboxClientService.saveEvent(NotificationEvent.builder()
                 .username(login)
                 .eventType(EventType.UPDATE_PROFILE)
                 .status(EventStatus.SUCCESS)
                 .message("Ваши персональные данные были успешно обновлены.")
                 .sourceService("accounts-service")
-                .payload(Map.of(
-                        "name", dto.getName(),
-                        "birthDate", dto.getBirthDate()
-                ))
-                .build();
+                .payload(Map.of("name", dto.getName(), "birthDate", dto.getBirthDate()))
+                .build());
     }
 
-    private Mono<AccountFullResponseDto> registerFromToken(Jwt jwt) {
-        BigDecimal initialSum = getInitialSum(jwt);
-        User newUser = getUsername(jwt);
-
-        return userRepository.save(newUser)
-                .flatMap(savedUser -> accountRepository.save(Account.builder()
-                                .userId(savedUser.getId())
-                                .balance(initialSum)
-                                .build())
-                        .flatMap(acc -> sendRegistrationNotification(savedUser, acc)
-                                .thenReturn(mapToFullDto(savedUser, acc))));
-    }
-
-    private Mono<Void> sendRegistrationNotification(User user, Account acc) {
-        NotificationEvent event = NotificationEvent.builder()
+    private Mono<Void> saveRegistrationNotification(User user, Account acc) {
+        return outboxClientService.saveEvent(NotificationEvent.builder()
                 .username(user.getLogin())
                 .eventType(EventType.REGISTRATION)
                 .status(EventStatus.SUCCESS)
@@ -105,22 +88,27 @@ public class UserServiceImpl implements UserService {
                         "initialBalance", acc.getBalance(),
                         "registrationDate", LocalDate.now()
                 ))
-                .build();
-
-        log.debug("Отправка уведомления о регистрации для пользователя: {}", user.getLogin());
-
-        return notificationClient.send(event)
-                .doOnError(e -> log.error("Ошибка отправки уведомления о регистрации: {}", e.getMessage()))
-                .onErrorResume(e -> Mono.empty());
+                .build());
     }
 
-    private BigDecimal getInitialSum(Jwt jwt) {
-        String initialSumStr = extractClaim(jwt, "initialSum");
+    private Mono<AccountFullResponseDto> registerFromToken(Jwt jwt) {
+        User newUser = buildUserFromToken(jwt);
+        BigDecimal initialSum = extractInitialSum(jwt);
 
-        return (initialSumStr != null) ? new BigDecimal(initialSumStr) : BigDecimal.ZERO;
+        return userRepository.save(newUser)
+                .flatMap(savedUser -> createAccountForUser(savedUser, initialSum)
+                        .flatMap(acc -> saveRegistrationNotification(savedUser, acc)
+                                .thenReturn(mapToFullDto(savedUser, acc))));
     }
 
-    private User getUsername(Jwt jwt) {
+    private Mono<Account> createAccountForUser(User user, BigDecimal balance) {
+        return accountRepository.save(Account.builder()
+                .userId(user.getId())
+                .balance(balance)
+                .build());
+    }
+
+    private User buildUserFromToken(Jwt jwt) {
         String name = jwt.getClaimAsString("given_name");
         String birthDateStr = extractClaim(jwt, "birthdate");
 
@@ -131,10 +119,15 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 
+    private BigDecimal extractInitialSum(Jwt jwt) {
+        String val = extractClaim(jwt, "initialSum");
+        return (val != null) ? new BigDecimal(val) : BigDecimal.ZERO;
+    }
+
     private String extractClaim(Jwt jwt, String claimName) {
         Object claim = jwt.getClaim(claimName);
         if (claim instanceof java.util.List<?> list && !list.isEmpty()) {
-            return list.get(0).toString();
+            return list.getFirst().toString();
         }
         return jwt.getClaimAsString(claimName);
     }

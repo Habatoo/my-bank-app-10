@@ -18,10 +18,13 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class NotificationClientService {
 
-    @Value("${spring.application.notification.url:http://notification/notification}")
+    @Value("${spring.application.notification.url:http://localhost:8085/notification}")
     private String notificationUrl;
 
+
     private final WebClient webClient;
+
+    private final WebClient backgroundWebClient;
 
     /**
      * Метод для вызова отправки в сервис уведомлений.
@@ -35,14 +38,33 @@ public class NotificationClientService {
                 .uri(notificationUrl)
                 .bodyValue(event)
                 .retrieve()
-                .onStatus(HttpStatusCode::isError, response -> {
-                    return response.bodyToMono(String.class)
-                            .flatMap(errorBody -> {
-                                log.error("Ошибка при отправке уведомления. Статус: {}, Тело: {}",
-                                        response.statusCode(), errorBody);
-                                return Mono.empty();
-                            });
-                })
+                .onStatus(HttpStatusCode::isError, response ->
+                        response.bodyToMono(String.class)
+                                .flatMap(errorBody -> {
+                                    log.error("Ошибка при отправке уведомления. Статус: {}, Тело: {}",
+                                            response.statusCode(), errorBody);
+                                    return Mono.empty();
+                                })
+                )
+                .toBodilessEntity()
+                .doOnSuccess(v -> log.debug("Уведомление успешно доставлено в модуль уведомлений"))
+                .then();
+    }
+
+    public Mono<Void> sendScheduled(NotificationEvent event) {
+        return backgroundWebClient
+                .post()
+                .uri(notificationUrl)
+                .bodyValue(event)
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, response ->
+                        response.bodyToMono(String.class)
+                                .flatMap(errorBody -> {
+                                    log.error("Ошибка при отправке уведомления. Статус: {}, Тело: {}",
+                                            response.statusCode(), errorBody);
+                                    return Mono.empty();
+                                })
+                )
                 .toBodilessEntity()
                 .doOnSuccess(v -> log.debug("Уведомление успешно доставлено в модуль уведомлений"))
                 .then();

@@ -53,6 +53,13 @@ spring:
               filters:
                 - TokenRelay=
                 - StripPrefix=2
+            - id: notification-service
+              uri: lb://notification
+              predicates:
+                - Path=/api/main/notification
+              filters:
+                - TokenRelay=
+                - StripPrefix=2
 
   security:
     oauth2:

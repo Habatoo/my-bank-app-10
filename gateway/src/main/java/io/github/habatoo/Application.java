@@ -1,5 +1,6 @@
 package io.github.habatoo;
 
+import io.github.habatoo.configurations.ServicesChassisAutoConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.data.r2dbc.R2dbcRepositoriesAutoConfiguration;
@@ -13,7 +14,8 @@ import org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration;
         R2dbcAutoConfiguration.class,
         R2dbcRepositoriesAutoConfiguration.class,
         HibernateJpaAutoConfiguration.class,
-        LiquibaseAutoConfiguration.class
+        LiquibaseAutoConfiguration.class,
+        ServicesChassisAutoConfiguration.class
 })
 public class Application {
 

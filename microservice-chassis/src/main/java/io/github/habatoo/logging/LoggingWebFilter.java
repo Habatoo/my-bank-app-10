@@ -17,9 +17,10 @@ public class LoggingWebFilter implements WebFilter {
     /**
      * Фильтр для входЯщих запросов - игнорирует эндпоинты health-check,
      * которые вызываются инфраструктурой Consul. Проводит замеры времени исполнения запроса.
+     *
      * @param exchange the current server exchange
-     * @param chain цепочка делегирования фильтров
-     * @return
+     * @param chain    цепочка делегирования фильтров
+     * @return Void
      */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
@@ -31,11 +32,21 @@ public class LoggingWebFilter implements WebFilter {
 
         long start = System.currentTimeMillis();
         return chain.filter(exchange)
+                .contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange))
                 .doOnSuccess(v -> {
                     long duration = System.currentTimeMillis() - start;
                     log.info("API CALL: {} {} | STATUS: {} | TIME: {}ms",
                             exchange.getRequest().getMethod(), path,
                             exchange.getResponse().getStatusCode(), duration);
                 });
+    }
+
+    public static Mono<ServerWebExchange> getExchange() {
+        return Mono.deferContextual(ctx -> {
+            if (ctx.hasKey(ServerWebExchange.class)) {
+                return Mono.just(ctx.get(ServerWebExchange.class));
+            }
+            return Mono.empty();
+        });
     }
 }

@@ -13,13 +13,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 /**
- * Юнит тесты бина NotificationChassisAutoConfiguration и связанных бинов.
+ * Юнит тесты бина ServicesChassisAutoConfiguration и связанных бинов.
  */
-@DisplayName("Юнит-тесты для NotificationChassisAutoConfiguration")
-class NotificationChassisAutoConfigurationTest {
+@DisplayName("Юнит-тесты для ServicesChassisAutoConfiguration")
+class ServicesChassisAutoConfigurationTest {
 
     private final ReactiveWebApplicationContextRunner contextRunner = new ReactiveWebApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(NotificationChassisAutoConfiguration.class))
+            .withConfiguration(AutoConfigurations.of(ServicesChassisAutoConfiguration.class))
             .withBean(WebClientChassisAutoConfiguration.class, () -> mock(WebClientChassisAutoConfiguration.class))
             .withBean(ReactiveClientRegistrationRepository.class, () -> mock(ReactiveClientRegistrationRepository.class))
             .withBean(ServerOAuth2AuthorizedClientRepository.class, () -> mock(ServerOAuth2AuthorizedClientRepository.class));
@@ -31,7 +31,7 @@ class NotificationChassisAutoConfigurationTest {
     @DisplayName("Бин автоконфигурации должен успешно создаваться в контексте")
     void shouldCreateBeanTest() {
         contextRunner.run(context -> {
-            assertThat(context).hasSingleBean(NotificationChassisAutoConfiguration.class);
+            assertThat(context).hasSingleBean(ServicesChassisAutoConfiguration.class);
         });
     }
 

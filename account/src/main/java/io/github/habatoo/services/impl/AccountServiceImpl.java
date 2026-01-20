@@ -6,10 +6,11 @@ import io.github.habatoo.dto.NotificationEvent;
 import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.dto.enums.EventStatus;
 import io.github.habatoo.dto.enums.EventType;
+import io.github.habatoo.models.Account;
 import io.github.habatoo.repositories.AccountRepository;
 import io.github.habatoo.repositories.UserRepository;
 import io.github.habatoo.services.AccountService;
-import io.github.habatoo.services.NotificationClientService;
+import io.github.habatoo.services.OutboxClientService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,7 @@ public class AccountServiceImpl implements AccountService {
 
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
-    private final NotificationClientService notificationClient;
+    private final OutboxClientService outboxClientService;
 
     @Override
     public Mono<AccountFullResponseDto> getByLogin(String login) {
@@ -52,53 +53,58 @@ public class AccountServiceImpl implements AccountService {
     public Mono<OperationResultDto<Void>> changeBalance(String login, BigDecimal delta) {
         return userRepository.findByLogin(login)
                 .flatMap(user -> accountRepository.findByUserId(user.getId()))
-                .flatMap(acc -> {
-                    BigDecimal newBalance = acc.getBalance().add(delta);
-
-                    if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
-                        return Mono.just(OperationResultDto.<Void>builder()
-                                .success(false)
-                                .errorCode("INSUFFICIENT_FUNDS")
-                                .message("Недостаточно средств на счете")
-                                .build());
-                    }
-
-                    acc.setBalance(newBalance);
-                    return accountRepository.save(acc)
-                            .then(sendBalanceNotification(login, delta, newBalance))
-                            .thenReturn(OperationResultDto.<Void>builder()
-                                    .success(true)
-                                    .message("Баланс обновлен")
-                                    .build());
-                })
-                .switchIfEmpty(Mono.just(OperationResultDto.<Void>builder()
-                        .success(false)
-                        .errorCode("ACCOUNT_NOT_FOUND")
-                        .message("Счет не найден")
-                        .build()));
+                .flatMap(account -> processBalanceChange(account, login, delta))
+                .switchIfEmpty(Mono.just(createErrorResponse("ACCOUNT_NOT_FOUND", "Счет не найден")));
     }
 
-    private Mono<Void> sendBalanceNotification(String login, BigDecimal delta, BigDecimal currentBalance) {
+    /**
+     * Логика проверки и запуска процесса обновления баланса.
+     */
+    private Mono<OperationResultDto<Void>> processBalanceChange(Account account, String login, BigDecimal delta) {
+        BigDecimal newBalance = account.getBalance().add(delta);
+        if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
+            return Mono.just(createErrorResponse("INSUFFICIENT_FUNDS", "Недостаточно средств"));
+        }
+        return updateAccountAndLogEvent(account, login, delta, newBalance);
+    }
+
+    private Mono<OperationResultDto<Void>> updateAccountAndLogEvent(
+            Account account, String login, BigDecimal delta, BigDecimal newBalance) {
+
+        account.setBalance(newBalance);
+        NotificationEvent event = getNotificationEvent(login, delta, newBalance);
+
+        return accountRepository.save(account)
+                .then(outboxClientService.saveEvent(event))
+                .thenReturn(buildSuccessResponse());
+    }
+
+    private OperationResultDto<Void> buildSuccessResponse() {
+        return OperationResultDto.<Void>builder()
+                .success(true)
+                .message("Баланс обновлен")
+                .build();
+    }
+
+    private OperationResultDto<Void> createErrorResponse(String code, String msg) {
+        return OperationResultDto.<Void>builder()
+                .success(false)
+                .errorCode(code)
+                .message(msg)
+                .build();
+    }
+
+    private NotificationEvent getNotificationEvent(String login, BigDecimal delta, BigDecimal currentBalance) {
         boolean isDeposit = delta.compareTo(BigDecimal.ZERO) >= 0;
-        NotificationEvent event = getNotificationEvent(login, delta, currentBalance, isDeposit);
-
-        return notificationClient.send(event)
-                .doOnError(e -> log.error("Ошибка отправки уведомления для {}: {}", login, e.getMessage()))
-                .onErrorResume(e -> Mono.empty());
-    }
-
-    private NotificationEvent getNotificationEvent(String login, BigDecimal delta, BigDecimal currentBalance, boolean isDeposit) {
         return NotificationEvent.builder()
                 .username(login)
                 .eventType(isDeposit ? EventType.DEPOSIT : EventType.WITHDRAW)
                 .status(EventStatus.SUCCESS)
-                .message(String.format("Баланс пользователя %s успешно изменен на %s", login, delta))
+                .message(String.format("Баланс пользователя %s изменен на %s", login, delta))
                 .sourceService("accounts-service")
                 .payload(Map.of(
                         "amount", delta.abs(),
-                        "totalBalance", currentBalance,
-                        "operationType", isDeposit ? "DEPOSIT" : "WITHDRAWAL",
-                        "currency", "RUB"
+                        "totalBalance", currentBalance
                 ))
                 .build();
     }

@@ -7,7 +7,7 @@ import io.github.habatoo.dto.enums.EventStatus;
 import io.github.habatoo.dto.enums.EventType;
 import io.github.habatoo.models.Transfer;
 import io.github.habatoo.repositories.TransfersRepository;
-import io.github.habatoo.services.NotificationClientService;
+import io.github.habatoo.services.OutboxClientService;
 import io.github.habatoo.services.TransferService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,10 +26,8 @@ import java.util.Map;
 public class TransferServiceImpl implements TransferService {
 
     private final WebClient webClient;
-
     private final TransfersRepository transfersRepository;
-
-    private final NotificationClientService notificationClient;
+    private final OutboxClientService outboxClientService;
 
     @Override
     public Mono<OperationResultDto<TransferDto>> processTransferOperation(
@@ -51,14 +49,6 @@ public class TransferServiceImpl implements TransferService {
                 });
     }
 
-    private Mono<OperationResultDto<Void>> withdrawFromSender(String login, BigDecimal amount) {
-        return callAccountService(login, amount.negate());
-    }
-
-    private Mono<OperationResultDto<Void>> depositToRecipient(String login, BigDecimal amount) {
-        return callAccountService(login, amount);
-    }
-
     private Mono<OperationResultDto<TransferDto>> handleDepositStep(
             OperationResultDto<Void> depositRes,
             String sender,
@@ -70,59 +60,83 @@ public class TransferServiceImpl implements TransferService {
             return saveTransferRecord(sender, recipient, amount, dto);
         }
 
-        log.error("КРИТИЧЕСКАЯ ОШИБКА: Списано у {}, но не зачислено {}", sender, recipient);
+        log.error("КРИТИЧЕСКАЯ ОШИБКА: Списано у {}, но не зачислено {}. Запуск компенсации...", sender, recipient);
 
         return compensateWithdrawal(sender, amount)
-                .then(sendCompensatedNotification(sender, amount))
+                .then(saveNotification(sender, amount, EventStatus.FAILURE))
                 .then(Mono.just(createDepositErrorResponse()));
     }
 
+    private Mono<OperationResultDto<TransferDto>> saveTransferRecord(
+            String sender,
+            String target,
+            BigDecimal amount,
+            TransferDto dto) {
+
+        Transfer transfer = Transfer.builder()
+                .senderUsername(sender)
+                .targetUsername(target)
+                .amount(amount)
+                .createdAt(OffsetDateTime.now())
+                .build();
+
+        return transfersRepository.save(transfer)
+                .then(saveNotification(sender, amount, EventStatus.SUCCESS, target))
+                .thenReturn(OperationResultDto.<TransferDto>builder()
+                        .success(true)
+                        .data(dto)
+                        .message("Перевод успешно выполнен")
+                        .build());
+    }
+
     /**
-     * Метод компенсации: возвращает деньги отправителю.
+     * Универсальный метод сохранения уведомлений через Outbox.
      */
+    private Mono<Void> saveNotification(String login, BigDecimal amount, EventStatus status, String... target) {
+        String targetName = (target.length > 0) ? target[0] : "получателю";
+
+        String message = (status == EventStatus.SUCCESS)
+                ? String.format("Перевод пользователю %s на сумму %.2f руб. завершен успешно.", targetName, amount)
+                : String.format("Перевод не удался. Сумма %.2f возвращена на ваш счет.", amount);
+
+        NotificationEvent event = NotificationEvent.builder()
+                .username(login)
+                .eventType(EventType.TRANSFER)
+                .status(status)
+                .message(message)
+                .sourceService("transfer-service")
+                .payload(Map.of(
+                        "sender_username", login,
+                        "target_username", targetName,
+                        "amount", amount,
+                        "status", status.name()
+                ))
+                .build();
+
+        return outboxClientService.saveEvent(event);
+    }
+
     private Mono<Void> compensateWithdrawal(String sender, BigDecimal amount) {
         log.info("Компенсация: Возврат суммы {} пользователю {}", amount, sender);
         return callAccountService(sender, amount)
                 .flatMap(res -> {
                     if (!res.isSuccess()) {
-                        log.error("ФАТАЛЬНАЯ ОШИБКА КОМПЕНСАЦИИ: Не удалось вернуть {} пользователю {}", amount, sender);
+                        log.error(
+                                "ФАТАЛЬНАЯ ОШИБКА КОМПЕНСАЦИИ: Не удалось вернуть {} пользователю {}", amount, sender);
                     }
                     return Mono.empty();
                 });
     }
 
-    /**
-     * Уведомление пользователя о том, что перевод не удался и деньги возвращены.
-     */
-    private Mono<Void> sendCompensatedNotification(String login, BigDecimal amount) {
-        NotificationEvent event = NotificationEvent.builder()
-                .username(login)
-                .eventType(EventType.TRANSFER)
-                .status(EventStatus.FAILURE)
-                .message(String.format("Перевод не удался. Сумма %.2f возвращена на ваш счет.", amount))
-                .sourceService("transfer-service")
-                .build();
-
-        return notificationClient.send(event).then();
+    private Mono<OperationResultDto<Void>> withdrawFromSender(String login, BigDecimal amount) {
+        return callAccountService(login, amount.negate());
     }
 
-    private OperationResultDto<TransferDto> handleWithdrawError(OperationResultDto<Void> res) {
-        return OperationResultDto.<TransferDto>builder()
-                .success(false)
-                .message("Ошибка списания: " + res.getMessage())
-                .build();
+    private Mono<OperationResultDto<Void>> depositToRecipient(String login, BigDecimal amount) {
+        return callAccountService(login, amount);
     }
 
-    private OperationResultDto<TransferDto> createDepositErrorResponse() {
-        return OperationResultDto.<TransferDto>builder()
-                .success(false)
-                .message("Не удалось зачислить средства получателю")
-                .build();
-    }
-
-    private Mono<OperationResultDto<Void>> callAccountService(
-            String login,
-            BigDecimal amount) {
+    private Mono<OperationResultDto<Void>> callAccountService(String login, BigDecimal amount) {
         return webClient.post()
                 .uri(uriBuilder -> uriBuilder
                         .host("gateway")
@@ -135,53 +149,17 @@ public class TransferServiceImpl implements TransferService {
                 });
     }
 
-    private Mono<OperationResultDto<TransferDto>> saveTransferRecord(
-            String sender,
-            String target,
-            BigDecimal amount,
-            TransferDto dto) {
-        Transfer transfer = Transfer.builder()
-                .senderUsername(sender)
-                .targetUsername(target)
-                .amount(amount)
-                .createdAt(OffsetDateTime.now())
+    private OperationResultDto<TransferDto> handleWithdrawError(OperationResultDto<Void> res) {
+        return OperationResultDto.<TransferDto>builder()
+                .success(false)
+                .message("Ошибка списания: " + res.getMessage())
                 .build();
-
-        return transfersRepository.save(transfer)
-                .then(sendTransferNotification(sender, dto))
-                .thenReturn(OperationResultDto.<TransferDto>builder()
-                        .success(true)
-                        .data(dto)
-                        .message("Перевод успешно выполнен")
-                        .build());
     }
 
-    private Mono<Void> sendTransferNotification(String login, TransferDto dto) {
-        NotificationEvent event = getNotificationEvent(login, dto);
-
-        return notificationClient.send(event)
-                .doOnError(e -> log.error("Не удалось отправить уведомление для {}: {}", login, e.getMessage()))
-                .onErrorResume(e -> Mono.empty());
-    }
-
-    private NotificationEvent getNotificationEvent(String login, TransferDto dto) {
-        String message = String.format("Перевод от %s пользователю %s наличных на сумму %.2f руб. завершено успешно.",
-                login, dto.getLogin(), dto.getValue());
-
-        log.info("Cash Service: Отправка подтверждения операции для {}", login);
-
-        return NotificationEvent.builder()
-                .username(login)
-                .eventType(EventType.TRANSFER)
-                .status(EventStatus.SUCCESS)
-                .message(message)
-                .sourceService("transfer-service")
-                .payload(Map.of(
-                        "sender_username", login,
-                        "target_username", dto.getLogin(),
-                        "amount", dto.getValue(),
-                        "currency", "RUB"
-                ))
+    private OperationResultDto<TransferDto> createDepositErrorResponse() {
+        return OperationResultDto.<TransferDto>builder()
+                .success(false)
+                .message("Не удалось зачислить средства получателю. Деньги возвращены на ваш счет.")
                 .build();
     }
 }

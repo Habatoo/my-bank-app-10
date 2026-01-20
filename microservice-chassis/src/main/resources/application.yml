@@ -2,8 +2,10 @@ spring:
   application:
     name: template
     notification:
-      url: ${NOTIFICATION_HOST:http://notification/notification}
+      url: ${NOTIFICATION_HOST:http://localhost:8085/notification}
     date: yyyy-MM-dd HH:mm:ss
+    fixed_write_delay: 5000
+    fixed_clean_delay: 50000
   config:
     import: "optional:consul:${CONSUL_HOST:localhost}:8500"
   cloud:
@@ -63,7 +65,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://${KEYCLOAK_HOST:keycloak}:8082/realms/${KEYCLOAK_REALM:bank}/protocol/openid-connect/certs
+          jwk-set-uri: http://${KEYCLOAK_HOST:localhost}:8082/realms/${KEYCLOAK_REALM:bank}/protocol/openid-connect/certs
       client:
         registration:
           keycloak:
