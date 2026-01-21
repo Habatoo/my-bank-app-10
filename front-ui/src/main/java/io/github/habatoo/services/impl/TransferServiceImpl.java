@@ -3,6 +3,9 @@ package io.github.habatoo.services.impl;
 import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.dto.TransferDto;
 import io.github.habatoo.services.TransferService;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
@@ -24,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 public class TransferServiceImpl implements TransferService {
 
     private final WebClient webClient;
+    private final CircuitBreakerRegistry registry;
 
     /**
      * {@inheritDoc}
@@ -31,6 +35,7 @@ public class TransferServiceImpl implements TransferService {
     @Override
     public Mono<String> sendMoney(TransferDto transferDto) {
         log.info("Transfer request to login: {} amount: {}", transferDto.getLogin(), transferDto.getValue());
+        CircuitBreaker cb = registry.circuitBreaker("gateway-cb");
 
         return webClient.post()
                 .uri(uriBuilder -> getUri(transferDto, uriBuilder))
@@ -38,6 +43,7 @@ public class TransferServiceImpl implements TransferService {
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<OperationResultDto<TransferDto>>() {
                 })
+                .transformDeferred(CircuitBreakerOperator.of(cb))
                 .map(result -> getRedirect(transferDto, result))
                 .onErrorResume(e -> {
                     log.error("Transfer error: {}", e.getMessage());

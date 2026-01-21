@@ -9,6 +9,9 @@ import io.github.habatoo.models.Transfer;
 import io.github.habatoo.repositories.TransfersRepository;
 import io.github.habatoo.services.OutboxClientService;
 import io.github.habatoo.services.TransferService;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
@@ -28,6 +31,7 @@ public class TransferServiceImpl implements TransferService {
     private final WebClient webClient;
     private final TransfersRepository transfersRepository;
     private final OutboxClientService outboxClientService;
+    private final CircuitBreakerRegistry registry;
 
     @Override
     public Mono<OperationResultDto<TransferDto>> processTransferOperation(
@@ -137,6 +141,8 @@ public class TransferServiceImpl implements TransferService {
     }
 
     private Mono<OperationResultDto<Void>> callAccountService(String login, BigDecimal amount) {
+        CircuitBreaker cb = registry.circuitBreaker("account-service-cb");
+
         return webClient.post()
                 .uri(uriBuilder -> uriBuilder
                         .host("gateway")
@@ -146,7 +152,8 @@ public class TransferServiceImpl implements TransferService {
                         .build())
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<OperationResultDto<Void>>() {
-                });
+                })
+                .transformDeferred(CircuitBreakerOperator.of(cb));
     }
 
     private OperationResultDto<TransferDto> handleWithdrawError(OperationResultDto<Void> res) {

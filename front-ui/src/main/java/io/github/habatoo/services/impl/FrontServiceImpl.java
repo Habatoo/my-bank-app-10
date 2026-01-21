@@ -2,6 +2,9 @@ package io.github.habatoo.services.impl;
 
 import io.github.habatoo.dto.AccountFullResponseDto;
 import io.github.habatoo.services.FrontService;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
@@ -26,6 +29,7 @@ import static io.github.habatoo.constants.ApiConstants.BASE_GATEWAY_URL;
 public class FrontServiceImpl implements FrontService {
 
     private final WebClient webClient;
+    private final CircuitBreakerRegistry registry;
 
     /**
      * {@inheritDoc}
@@ -70,12 +74,16 @@ public class FrontServiceImpl implements FrontService {
     }
 
     private Mono<List<AccountFullResponseDto>> fetchAllAccounts() {
+        CircuitBreaker cb = registry.circuitBreaker("gateway-cb");
+
         return ReactiveSecurityContextHolder.getContext()
                 .map(SecurityContext::getAuthentication)
                 .flatMapMany(auth -> webClient.get()
                         .uri(BASE_GATEWAY_URL + "/main/users")
                         .retrieve()
-                        .bodyToFlux(AccountFullResponseDto.class))
+                        .bodyToFlux(AccountFullResponseDto.class)
+                        .transformDeferred(CircuitBreakerOperator.of(cb))
+                )
                 .collectList()
                 .onErrorReturn(Collections.emptyList());
     }

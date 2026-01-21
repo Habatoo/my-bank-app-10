@@ -10,6 +10,9 @@ import io.github.habatoo.models.Cash;
 import io.github.habatoo.repositories.OperationsRepository;
 import io.github.habatoo.services.CashService;
 import io.github.habatoo.services.OutboxClientService;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
@@ -29,6 +32,7 @@ public class CashServiceImpl implements CashService {
     private final WebClient webClient;
     private final OperationsRepository operationsRepository;
     private final OutboxClientService outboxClientService;
+    private final CircuitBreakerRegistry registry;
 
     @Override
     public Mono<OperationResultDto<CashDto>> processCashOperation(String login, CashDto cashDto) {
@@ -111,6 +115,8 @@ public class CashServiceImpl implements CashService {
     }
 
     private Mono<OperationResultDto<Void>> updateAccountBalance(String login, BigDecimal amount) {
+        CircuitBreaker cb = registry.circuitBreaker("account-service-cb");
+
         return webClient.post()
                 .uri(uriBuilder -> uriBuilder
                         .host("gateway")
@@ -120,7 +126,8 @@ public class CashServiceImpl implements CashService {
                         .build())
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<OperationResultDto<Void>>() {
-                });
+                })
+                .transformDeferred(CircuitBreakerOperator.of(cb));
     }
 
     private Cash buildCashEntity(String login, CashDto cashDto) {

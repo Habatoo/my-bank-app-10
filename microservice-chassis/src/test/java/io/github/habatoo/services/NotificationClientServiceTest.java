@@ -1,6 +1,7 @@
 package io.github.habatoo.services;
 
 import io.github.habatoo.dto.NotificationEvent;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,9 @@ class NotificationClientServiceTest {
     private WebClient.ResponseSpec responseSpec;
 
     @Mock
+    private CircuitBreakerRegistry circuitBreakerRegistry;
+
+    @Mock
     @SuppressWarnings("rawtypes")
     private WebClient.RequestHeadersSpec requestHeadersSpec;
 
@@ -49,7 +53,7 @@ class NotificationClientServiceTest {
 
     @BeforeEach
     void setUp() {
-        notificationClient = new NotificationClientService(webClient, backgroundWebClient);
+        notificationClient = new NotificationClientService(backgroundWebClient, circuitBreakerRegistry);
         ReflectionTestUtils.setField(notificationClient, "notificationUrl", "http://test-url");
     }
 
@@ -65,7 +69,7 @@ class NotificationClientServiceTest {
         when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
         when(responseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
 
-        StepVerifier.create(notificationClient.send(event))
+        StepVerifier.create(notificationClient.sendScheduled(event))
                 .verifyComplete();
 
         verify(webClient).post();

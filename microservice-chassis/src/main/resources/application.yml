@@ -27,7 +27,7 @@ spring:
           delay: 1000
 
   resilience:
-    instance-name: "default"
+    instanceName: ${spring.application.name}
     sliding-window-size: 10
     failure-rate-threshold: 50
     wait-duration-in-open-state: 10

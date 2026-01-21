@@ -27,7 +27,7 @@ class ResilienceChassisAutoConfigurationTest {
             ))
             .withBean(NotificationClientService.class, () -> {
                 NotificationClientService mock = mock(NotificationClientService.class);
-                when(mock.send(any(NotificationEvent.class))).thenReturn(Mono.empty());
+                when(mock.sendScheduled(any(NotificationEvent.class))).thenReturn(Mono.empty());
                 return mock;
             });
 
@@ -67,7 +67,7 @@ class ResilienceChassisAutoConfigurationTest {
             circuitBreaker.transitionToOpenState();
 
             ArgumentCaptor<NotificationEvent> eventCaptor = ArgumentCaptor.forClass(NotificationEvent.class);
-            verify(notificationService, timeout(2000)).send(eventCaptor.capture());
+            verify(notificationService, timeout(2000)).sendScheduled(eventCaptor.capture());
 
             NotificationEvent capturedEvent = eventCaptor.getValue();
             assertThat(capturedEvent.getSourceService()).isEqualTo("banking-service");
@@ -86,7 +86,7 @@ class ResilienceChassisAutoConfigurationTest {
             cb.transitionToDisabledState();
 
             ArgumentCaptor<NotificationEvent> eventCaptor = ArgumentCaptor.forClass(NotificationEvent.class);
-            verify(notificationService, timeout(2000)).send(eventCaptor.capture());
+            verify(notificationService, timeout(2000)).sendScheduled(eventCaptor.capture());
 
             assertThat(eventCaptor.getValue().getSourceService()).isEqualTo("unknown-service");
         });

@@ -32,6 +32,11 @@ spring:
               uri: lb://account
               predicates:
                 - Path=/api/account/register
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: accountServiceCB
+                    fallbackUri: forward:/fallback/account-unavailable
             - id: account-service
               uri: lb://account
               predicates:
@@ -39,6 +44,10 @@ spring:
               filters:
                 - TokenRelay=
                 - StripPrefix=2
+                - name: CircuitBreaker
+                  args:
+                    name: accountServiceCB
+                    fallbackUri: forward:/fallback/account-unavailable
             - id: cash-service
               uri: lb://cash
               predicates:
@@ -46,6 +55,10 @@ spring:
               filters:
                 - TokenRelay=
                 - StripPrefix=2
+                - name: CircuitBreaker
+                  args:
+                    name: cashServiceCB
+                    fallbackUri: forward:/fallback/cash-unavailable
             - id: transfer-service
               uri: lb://transfer
               predicates:
@@ -53,13 +66,10 @@ spring:
               filters:
                 - TokenRelay=
                 - StripPrefix=2
-            - id: notification-service
-              uri: lb://notification
-              predicates:
-                - Path=/api/main/notification
-              filters:
-                - TokenRelay=
-                - StripPrefix=2
+                - name: CircuitBreaker
+                  args:
+                    name: transferServiceCB
+                    fallbackUri: forward:/fallback/transfer-unavailable
 
   security:
     oauth2:

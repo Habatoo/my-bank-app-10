@@ -35,6 +35,7 @@ dependencies {
 
     api 'io.github.resilience4j:resilience4j-reactor'
     api 'io.github.resilience4j:resilience4j-spring-boot3'
+    api 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
 
     api 'org.springframework.boot:spring-boot-starter-data-r2dbc'
     api 'org.springframework.boot:spring-boot-starter-data-jpa'

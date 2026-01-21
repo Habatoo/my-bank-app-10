@@ -42,6 +42,7 @@ public class NotificationServiceImpl implements NotificationService {
             case DEPOSIT, WITHDRAW -> sendPushNotification(event);
             case TRANSFER -> sendTransferNotifications(event);
             case UPDATE_PROFILE -> sendUpdateProfile(event);
+            case SYSTEM_ALERT -> sendAlert(event);
             default -> sendUnknownNotification(event);
         }
     }
@@ -62,6 +63,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     private void sendUpdateProfile(NotificationEvent event) {
         log.info("Профиль {} обновлен, отправка SMS не требуется", event.getUsername());
+    }
+
+    private void sendAlert(NotificationEvent event) {
+        log.info("dAlert для {}: {}", event.getUsername(), event.getMessage());
     }
 
     private void sendUnknownNotification(NotificationEvent event) {

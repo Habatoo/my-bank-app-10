@@ -102,17 +102,17 @@ public class ResilienceChassisAutoConfiguration {
             CircuitBreakerOnStateTransitionEvent stateEvent,
             CircuitBreaker.State from,
             CircuitBreaker.State to) {
-        notificationClientService.send(NotificationEvent.builder()
-                .eventType(EventType.SYSTEM_ALERT)
-                .status(EventStatus.FAILURE)
-                .message(String.format("CircuitBreaker '%s' changed state from %s to %s",
-                        stateEvent.getCircuitBreakerName(), from, to))
-                .sourceService(applicationName)
-                .payload(Map.of(
-                        "fromState", from.name(),
-                        "toState", to.name()
-                ))
-                .build()).subscribe();
+        notificationClientService.sendScheduled(NotificationEvent.builder()
+                        .eventType(EventType.SYSTEM_ALERT)
+                        .status(EventStatus.FAILURE)
+                        .message(String.format("CircuitBreaker '%s' в сервисе '%s' изменил состояние: %s -> %s",
+                                stateEvent.getCircuitBreakerName(), applicationName, from, to))
+                        .sourceService(applicationName)
+                        .payload(Map.of("fromState", from.name(), "toState", to.name()))
+                        .build())
+                .doOnError(e -> log.error(
+                        "Не удалось отправить Resilience alert в сервис уведомлений: {}", e.getMessage()))
+                .subscribe();
     }
 
     /**

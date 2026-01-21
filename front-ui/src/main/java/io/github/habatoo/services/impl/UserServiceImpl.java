@@ -2,6 +2,9 @@ package io.github.habatoo.services.impl;
 
 import io.github.habatoo.dto.UserUpdateDto;
 import io.github.habatoo.services.UserService;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,12 +27,15 @@ import static io.github.habatoo.constants.ApiConstants.BASE_GATEWAY_URL;
 public class UserServiceImpl implements UserService {
 
     private final WebClient webClient;
+    private final CircuitBreakerRegistry registry;
 
     /**
      * {@inheritDoc}
      */
     @Override
     public Mono<RedirectView> updateProfile(ServerWebExchange exchange) {
+        CircuitBreaker cb = registry.circuitBreaker("gateway-cb");
+
         return exchange.getFormData()
                 .flatMap(formData -> {
                     String name = formData.getFirst("name");
@@ -46,6 +52,7 @@ public class UserServiceImpl implements UserService {
                             .bodyValue(updateDto)
                             .retrieve()
                             .toBodilessEntity()
+                            .transformDeferred(CircuitBreakerOperator.of(cb))
                             .map(response -> getRedirectView())
                             .onErrorResume(e -> {
                                 log.error("Update error: ", e);
