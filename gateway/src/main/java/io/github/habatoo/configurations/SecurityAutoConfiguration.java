@@ -19,7 +19,6 @@ public class SecurityAutoConfiguration {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(auth -> auth
                         .pathMatchers("/actuator/**").permitAll()
-                        .pathMatchers("/api/**").authenticated()
                         .anyExchange().authenticated()
                 )
                 .exceptionHandling(exceptionHandling -> exceptionHandling
@@ -28,9 +27,8 @@ public class SecurityAutoConfiguration {
                             return exchange.getResponse().setComplete();
                         })
                 )
-                .oauth2Login(withDefaults())
-                .oauth2Client(withDefaults())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(withDefaults()))
+                .oauth2Client(withDefaults())
                 .build();
     }
 }

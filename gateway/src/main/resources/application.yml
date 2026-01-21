@@ -71,7 +71,7 @@ spring:
           keycloak:
             provider: keycloak
             client-id: front-ui
-            client-secret: ${KEYCLOAK_FRONT_UI_SECRET:90bd600c-7781-4435-961e-1f5139265f7c}
+            client-secret: ${KEYCLOAK_GATEWAY_SECRET:g7777777-8888-9999-aaaa-bbbbccccdddd}
             authorization-grant-type: authorization_code
             scope: openid,profile,email
         provider:

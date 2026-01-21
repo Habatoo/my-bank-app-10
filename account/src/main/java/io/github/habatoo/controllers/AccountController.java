@@ -30,7 +30,7 @@ public class AccountController {
     }
 
     @PostMapping("/balance")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN') or hasRole('ACCOUNT_ACCESS')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('ACCOUNT_ACCESS')")
     public Mono<OperationResultDto<Void>> updateBalanceInternal(
             @RequestParam String login,
             @RequestParam BigDecimal amount) {

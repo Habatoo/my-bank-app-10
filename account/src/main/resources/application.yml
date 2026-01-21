@@ -55,6 +55,7 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: http://${KEYCLOAK_HOST:localhost}:8082/realms/${KEYCLOAK_REALM:bank}/protocol/openid-connect/certs
+          issuer-uri: http://${KEYCLOAK_HOST:localhost}:8082/realms/${KEYCLOAK_REALM:bank}
       client:
         registration:
           keycloak:
@@ -62,6 +63,7 @@ spring:
             client-id: ${spring.application.name}
             client-secret: ${KEYCLOAK_ACCOUNT_SECRET:a2977717-36e6-42bc-862d-06927877298c}
             authorization-grant-type: client_credentials
+            scope: openid
         provider:
           keycloak:
             issuer-uri: http://${KEYCLOAK_HOST:localhost}:${KEYCLOAK_PORT:8082}/realms/${KEYCLOAK_REALM:bank}

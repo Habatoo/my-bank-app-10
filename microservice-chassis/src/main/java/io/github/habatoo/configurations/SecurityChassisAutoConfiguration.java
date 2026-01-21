@@ -15,6 +15,8 @@ import reactor.core.publisher.Mono;
 
 import java.util.Collection;
 
+import static org.springframework.security.config.Customizer.withDefaults;
+
 /**
  * Конфигурация безопасности для WebFlux приложения.
  * <p>
@@ -45,6 +47,7 @@ public class SecurityChassisAutoConfiguration {
                 .oauth2ResourceServer(spec -> spec
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                 )
+                .oauth2Client(withDefaults())
                 .build();
     }
 
