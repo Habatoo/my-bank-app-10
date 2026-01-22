@@ -14,6 +14,25 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Сервис для реализации паттерна "Transactional Outbox".
+ * <p>
+ * Обеспечивает гарантированную доставку уведомлений путем их предварительного сохранения
+ * в промежуточную таблицу базы данных. Это позволяет избежать потери событий при сбоях
+ * внешнего сервиса уведомлений или брокера сообщений.
+ * </p>
+ * <p>
+ * Основные функции:
+ * <ul>
+ * <li>Сохранение новых событий в статусе {@code NEW} в рамках текущей транзакции.</li>
+ * <li>Периодическая обработка и отправка сохраненных событий через {@link NotificationClientService}.</li>
+ * <li>Обновление статусов событий на {@code PROCESSED} в случае успеха или {@code FAILED} при ошибке.</li>
+ * <li>Автоматическая очистка устаревших записей из базы данных.</li>
+ * </ul>
+ * </p>
+ *
+ * @see <a href="https://microservices.io/patterns/data/transactional-outbox.html">Pattern: Transactional Outbox</a>
+ */
 @Slf4j
 @RequiredArgsConstructor
 public class OutboxClientService {
@@ -25,6 +44,12 @@ public class OutboxClientService {
     private final OutboxRepository outboxRepository;
     private final NotificationClientService notificationClient;
 
+    /**
+     * Сохраняет событие в таблицу Outbox для последующей асинхронной обработки.
+     *
+     * @param event объект события уведомления.
+     * @return {@link Mono}, подтверждающий завершение операции сохранения.
+     */
     public Mono<Void> saveEvent(NotificationEvent event) {
         Outbox outboxEntry = Outbox.builder()
                 .eventType(event.getEventType().name())
@@ -41,8 +66,11 @@ public class OutboxClientService {
     }
 
     /**
-     * Запуск каждые 5 секунд.
-     * fixedDelay гарантирует, что следующая итерация начнется через 5 сек после завершения предыдущей.
+     * Выполняет поиск необработанных событий и инициирует их отправку.
+     * <p>
+     * Метод обрабатывает каждое событие независимо: при успешной отправке помечает его
+     * как обработанное, при возникновении исключения — как ошибочное.
+     * </p>
      */
     public void processOutboxEvents() {
         outboxRepository.findAllByStatus(STATUS_NEW)
@@ -59,8 +87,11 @@ public class OutboxClientService {
     }
 
     /**
-     * Очистка старых записей.
-     * Запускается раз в час (3600000 мс).
+     * Удаляет старые записи из таблицы Outbox, находящиеся в конечных статусах.
+     * <p>
+     * Очистке подлежат записи, созданные более одного часа назад, чтобы предотвратить
+     * бесконечный рост объема базы данных.
+     * </p>
      */
     public void cleanupOldRecords() {
         LocalDateTime threshold = LocalDateTime.now().minusHours(1);

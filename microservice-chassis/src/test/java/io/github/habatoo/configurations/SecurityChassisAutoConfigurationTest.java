@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ReactiveWebApplicationContextRunner;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.server.ServerOAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter;
@@ -26,7 +28,10 @@ class SecurityChassisAutoConfigurationTest {
 
     private final ReactiveWebApplicationContextRunner contextRunner = new ReactiveWebApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(SecurityChassisAutoConfiguration.class))
-            .withBean(ReactiveJwtDecoder.class, () -> mock(ReactiveJwtDecoder.class));
+            .withPropertyValues("spring.security.oauth2.resourceserver.jwt.jwk-set-uri=http://localhost/jwks")
+            .withBean(ReactiveJwtDecoder.class, () -> mock(ReactiveJwtDecoder.class))
+            .withBean(ReactiveClientRegistrationRepository.class, () -> mock(ReactiveClientRegistrationRepository.class))
+            .withBean(ServerOAuth2AuthorizedClientRepository.class, () -> mock(ServerOAuth2AuthorizedClientRepository.class));
 
     @Test
     @DisplayName("Должен регистрировать основные бины безопасности")
@@ -71,6 +76,7 @@ class SecurityChassisAutoConfigurationTest {
             Jwt jwt = Jwt.withTokenValue("mock-token")
                     .header("alg", "none")
                     .issuedAt(Instant.now())
+                    .expiresAt(Instant.now().plusSeconds(3600))
                     .build();
 
             StepVerifier.create(converter.convert(jwt))
