@@ -55,7 +55,7 @@ dependencies {
 
     api 'org.slf4j:slf4j-api'
     api 'ch.qos.logback:logback-classic'
-
+    api 'org.springframework.security:spring-security-test'
     api 'org.springframework.cloud:spring-cloud-starter-contract-verifier:4.3.0'
 
     compileOnly 'org.projectlombok:lombok'
