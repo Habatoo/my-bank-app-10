@@ -17,6 +17,7 @@ dependencyManagement {
 
 dependencies {
     implementation project(':microservice-chassis')
+    testImplementation project(':microservice-chassis')
 
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'

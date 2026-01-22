@@ -45,7 +45,7 @@ public class NotificationController {
         log.debug("Получено событие для уведомления: {}", event);
 
         return notificationService.processEvent(event)
-                .map(result -> OperationResultDto.<Void>builder()
+                .thenReturn(OperationResultDto.<Void>builder()
                         .success(true)
                         .message("Уведомление принято в обработку")
                         .build())
