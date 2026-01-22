@@ -56,6 +56,8 @@ dependencies {
     api 'org.slf4j:slf4j-api'
     api 'ch.qos.logback:logback-classic'
 
+    api 'org.springframework.cloud:spring-cloud-starter-contract-verifier:4.3.0'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
@@ -69,6 +71,7 @@ dependencies {
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:r2dbc'
     testImplementation 'io.micrometer:micrometer-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
