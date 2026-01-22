@@ -9,6 +9,11 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+/**
+ * Сущность, представляющая запись о денежном переводе между пользователями.
+ * Хранится в таблице "transfers" и содержит аудит-информацию об отправителе,
+ * получателе и сумме транзакции.
+ */
 @Table("transfers")
 @Getter
 @Setter
@@ -17,17 +22,22 @@ import java.util.UUID;
 @AllArgsConstructor
 public class Transfer {
 
+    /** Уникальный идентификатор транзакции */
     @Id
     private UUID id;
 
+    /** Имя пользователя (логин) отправителя средств */
     @Column("sender_username")
     private String senderUsername;
 
+    /** Имя пользователя (логин) получателя средств */
     @Column("target_username")
     private String targetUsername;
 
+    /** Сумма перевода */
     private BigDecimal amount;
 
+    /** Дата и время совершения операции */
     @Column("created_at")
     private OffsetDateTime createdAt;
 }

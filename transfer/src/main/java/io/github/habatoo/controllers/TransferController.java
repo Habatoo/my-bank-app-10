@@ -15,6 +15,10 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 
+/**
+ * Контроллер для управления операциями денежных переводов между счетами пользователей.
+ * Обеспечивает обработку входящих HTTP-запросов на перевод средств и проверку прав доступа.
+ */
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -22,6 +26,15 @@ public class TransferController {
 
     private final TransferService transferService;
 
+    /**
+     * Выполняет операцию перевода денежных средств от текущего аутентифицированного пользователя
+     * к целевому аккаунту.
+     *
+     * @param value       сумма перевода (должна быть положительной).
+     * @param targetLogin логин получателя средств.
+     * @param jwt         объект JWT-токена, содержащий данные об аутентифицированном отправителе.
+     * @return {@link Mono}, содержащий {@link OperationResultDto} с результатом операции и данными перевода.
+     */
     @PostMapping("/transfer")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN') or hasRole('TRANSFER_ACCESS')")
     public Mono<OperationResultDto<TransferDto>> updateBalance(
@@ -31,7 +44,10 @@ public class TransferController {
 
         String senderLogin = jwt.getClaimAsString("preferred_username");
 
+        log.info("Запрос на перевод от пользователя '{}' к '{}' на сумму {}", senderLogin, targetLogin, value);
+
         if (value == null || value.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("Попытка перевода некорректной суммы: {}", value);
             return Mono.just(OperationResultDto.<TransferDto>builder()
                     .success(false)
                     .message("Сумма перевода должна быть больше нуля")
