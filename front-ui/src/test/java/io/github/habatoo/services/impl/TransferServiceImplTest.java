@@ -2,6 +2,8 @@ package io.github.habatoo.services.impl;
 
 import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.dto.TransferDto;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -52,6 +54,12 @@ class TransferServiceImplTest {
     @Mock
     private WebClient.ResponseSpec responseSpec;
 
+    @Mock
+    private CircuitBreakerRegistry circuitBreakerRegistry;
+
+    @Mock
+    private CircuitBreaker circuitBreaker;
+
     @InjectMocks
     private TransferServiceImpl transferService;
 
@@ -61,6 +69,9 @@ class TransferServiceImplTest {
     @BeforeEach
     @SuppressWarnings("unchecked")
     void setUp() {
+        CircuitBreaker cb = CircuitBreaker.ofDefaults("gateway-cb");
+        when(circuitBreakerRegistry.circuitBreaker("gateway-cb")).thenReturn(cb);
+
         when(webClient.post()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.bodyValue(any())).thenReturn(requestHeadersSpec);

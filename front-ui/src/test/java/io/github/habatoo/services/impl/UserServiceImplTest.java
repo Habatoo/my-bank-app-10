@@ -1,5 +1,7 @@
 package io.github.habatoo.services.impl;
 
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -57,6 +59,12 @@ class UserServiceImplTest {
     @Mock
     private WebClient.ResponseSpec responseSpec;
 
+    @Mock
+    private CircuitBreakerRegistry circuitBreakerRegistry;
+
+    @Mock
+    private CircuitBreaker circuitBreaker;
+
     @InjectMocks
     private UserServiceImpl userService;
 
@@ -66,6 +74,9 @@ class UserServiceImplTest {
     @BeforeEach
     @SuppressWarnings("unchecked")
     void setUp() {
+        CircuitBreaker cb = CircuitBreaker.ofDefaults("gateway-cb");
+        when(circuitBreakerRegistry.circuitBreaker("gateway-cb")).thenReturn(cb);
+
         when(webClient.patch()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
         when(requestBodySpec.bodyValue(any())).thenReturn(requestHeadersSpec);

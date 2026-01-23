@@ -1,6 +1,8 @@
 package io.github.habatoo.services.impl;
 
 import io.github.habatoo.dto.AccountFullResponseDto;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+/**
+ * Тесты для проверки логики работы сервиса операций с фронтом (FrontServiceImpl).
+ * <p>
+ * Проверяют корректность формирования запросов к API через WebClient,
+ * обработку успешных ответов и сценарии возникновения ошибок.
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Юнит-тесты фронт-сервиса (FrontServiceImpl)")
 class FrontServiceImplTest {
@@ -44,6 +53,12 @@ class FrontServiceImplTest {
     @Mock
     private WebClient.ResponseSpec responseSpec;
 
+    @Mock
+    private CircuitBreakerRegistry circuitBreakerRegistry;
+
+    @Mock
+    private CircuitBreaker circuitBreaker;
+
     @InjectMocks
     private FrontServiceImpl frontService;
 
@@ -52,6 +67,9 @@ class FrontServiceImplTest {
     @BeforeEach
     @SuppressWarnings("unchecked")
     void setUp() {
+        CircuitBreaker cb = CircuitBreaker.ofDefaults("gateway-cb");
+        when(circuitBreakerRegistry.circuitBreaker("gateway-cb")).thenReturn(cb);
+
         var auth = new UsernamePasswordAuthenticationToken("user", "password");
         securityContext = new SecurityContextImpl(auth);
 

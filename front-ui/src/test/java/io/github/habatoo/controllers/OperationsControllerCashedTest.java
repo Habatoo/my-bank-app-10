@@ -1,5 +1,6 @@
 package io.github.habatoo.controllers;
 
+import io.github.habatoo.configurations.SecurityChassisAutoConfiguration;
 import io.github.habatoo.dto.CashDto;
 import io.github.habatoo.dto.TransferDto;
 import io.github.habatoo.services.CashService;
@@ -8,11 +9,13 @@ import io.github.habatoo.services.UserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
+import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.result.view.RedirectView;
@@ -20,7 +23,9 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt;
 
 /**
  * Тесты для проверки обработки банковских операций в OperationsController.
@@ -30,10 +35,13 @@ import static org.springframework.security.test.web.reactive.server.SecurityMock
  * </p>
  */
 @WebFluxTest(controllers = OperationsController.class)
+@ContextConfiguration(classes = {
+        OperationsController.class,
+        SecurityChassisAutoConfiguration.class
+})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DisplayName("Юнит-тесты контроллера операций (OperationsController)")
 class OperationsControllerCashedTest {
-
     @Autowired
     private WebTestClient webTestClient;
 
@@ -46,69 +54,81 @@ class OperationsControllerCashedTest {
     @MockitoBean
     private UserService userService;
 
-    /**
-     * Тест проверяет обработку пополнения/снятия наличных.
-     * Имитирует отправку данных HTML-формы.
-     */
-    @Test
-    @WithMockUser
-    @DisplayName("Обработка операций с наличными через /cash")
-    void shouldHandleCashOperationTest() {
-        String expectedRedirect = "redirect:/main?info=success";
-        Mockito.when(cashService.moveMoney(any(CashDto.class)))
-                .thenReturn(Mono.just(expectedRedirect));
+    @MockitoBean
+    private ReactiveClientRegistrationRepository clientRegistrationRepository;
 
-        webTestClient.mutateWith(csrf())
-                .post().uri("/cash")
+    @MockitoBean
+    private ReactiveOAuth2AuthorizedClientService authorizedClientService;
+
+    @MockitoBean
+    private ErrorWebExceptionHandler errorWebExceptionHandler;
+
+    @Test
+    @DisplayName("POST /cash - Успешный редирект после операции с наличными")
+    void handleCashSuccess() {
+        when(cashService.moveMoney(any(CashDto.class)))
+                .thenReturn(Mono.just("redirect:/main?info=Success"));
+
+        webTestClient
+                .mutateWith(csrf())
+                .mutateWith(mockJwt())
+                .post()
+                .uri("/cash")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .bodyValue("value=1000&action=PUT")
+                .bodyValue("value=100&action=PUT")
                 .exchange()
                 .expectStatus().is3xxRedirection()
-                .expectHeader().valueEquals("Location", "/main?info=success");
-
-        Mockito.verify(cashService).moveMoney(any(CashDto.class));
+                .expectHeader().valueEquals("Location", "/main?info=Success");
     }
 
-    /**
-     * Тест проверяет обработку перевода средств другому пользователю.
-     */
     @Test
-    @WithMockUser
-    @DisplayName("Обработка перевода средств через /transfer")
-    void shouldHandleTransferOperationTest() {
-        String expectedRedirect = "redirect:/main?info=transferred";
-        Mockito.when(transferService.sendMoney(any(TransferDto.class)))
-                .thenReturn(Mono.just(expectedRedirect));
+    @DisplayName("POST /transfer - Успешный редирект после перевода средств")
+    void handleTransferSuccess() {
+        when(transferService.sendMoney(any(TransferDto.class)))
+                .thenReturn(Mono.just("redirect:/main?info=TransferDone"));
 
-        webTestClient.mutateWith(csrf())
-                .post().uri("/transfer")
+        webTestClient
+                .mutateWith(csrf())
+                .mutateWith(mockJwt())
+                .post()
+                .uri("/transfer")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .bodyValue("login=user2&value=500")
+                .bodyValue("login=recipient&value=500")
                 .exchange()
                 .expectStatus().is3xxRedirection()
-                .expectHeader().valueEquals("Location", "/main?info=transferred");
-
-        Mockito.verify(transferService).sendMoney(any(TransferDto.class));
+                .expectHeader().valueEquals("Location", "/main?info=TransferDone");
     }
 
-    /**
-     * Тест проверяет обновление профиля пользователя.
-     */
     @Test
-    @WithMockUser
-    @DisplayName("Обновление профиля через /account")
-    void shouldUpdateUserProfileTest() {
-        Mockito.when(userService.updateProfile(any(ServerWebExchange.class)))
-                .thenReturn(Mono.just(new RedirectView("/main")));
+    @DisplayName("POST /account - Обновление профиля через ServerWebExchange")
+    void updateProfileSuccess() {
+        RedirectView redirectView = new RedirectView("/main?info=ProfileUpdated");
 
-        webTestClient.mutateWith(csrf())
-                .post().uri("/account")
+        when(userService.updateProfile(any(ServerWebExchange.class)))
+                .thenReturn(Mono.just(redirectView));
+
+        webTestClient
+                .mutateWith(csrf())
+                .mutateWith(mockJwt())
+                .post()
+                .uri("/account")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .bodyValue("name=Иван&birthdate=1990-01-01")
+                .bodyValue("name=NewName")
                 .exchange()
                 .expectStatus().is3xxRedirection()
-                .expectHeader().valueEquals("Location", "/main");
+                .expectHeader().valueEquals("Location", "/main?info=ProfileUpdated");
+    }
 
-        Mockito.verify(userService).updateProfile(any(ServerWebExchange.class));
+    @Test
+    @DisplayName("POST /cash - Ошибка 403 при отсутствии CSRF токена")
+    void handleCashNoCsrfForbidden() {
+        webTestClient
+                .mutateWith(mockJwt())
+                .post()
+                .uri("/cash")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .bodyValue("value=100")
+                .exchange()
+                .expectStatus().isForbidden();
     }
 }
