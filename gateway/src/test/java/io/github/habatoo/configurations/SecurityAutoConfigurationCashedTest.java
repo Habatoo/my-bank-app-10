@@ -11,7 +11,15 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
- * Юнит тесты бина SecurityAutoConfiguration и связанных бинов с WebFluxTest.
+ * Тестовый класс для проверки конфигурации безопасности, определенной в {@link SecurityAutoConfiguration}.
+ * <p>
+ * Данные тесты проверяют корректность настройки цепочки фильтров безопасности (Security Filter Chain),
+ * включая правила доступа к защищенным ресурсам и интеграцию с инфраструктурой OAuth2 в реактивной среде.
+ * </p>
+ * <p>
+ * Используется {@link WebFluxTest} для изоляции только веб-слоя и безопасности,
+ * без загрузки полного контекста приложения.
+ * </p>
  */
 @WebFluxTest
 @Import(SecurityAutoConfiguration.class)
@@ -27,6 +35,14 @@ class SecurityAutoConfigurationCashedTest {
     @MockitoBean
     private ServerOAuth2AuthorizedClientRepository authorizedClientRepository;
 
+    /**
+     * Проверяет, что любой запрос к защищенному ресурсу (например, /transfer) без предоставления
+     * учетных данных или JWT-токена отклоняется системой безопасности.
+     * <p>
+     * Ожидается возврат HTTP статуса 401 (Unauthorized) или 302 (Redirect to Login) в зависимости
+     * от настройки конкретной точки входа (Entry Point).
+     * </p>
+     */
     @Test
     @DisplayName("Доступ к API без токена должен возвращать 401 Unauthorized")
     void anyExchangeWithoutTokenShouldReturn401() {
