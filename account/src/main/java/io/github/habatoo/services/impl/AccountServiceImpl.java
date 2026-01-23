@@ -21,6 +21,9 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 import java.util.Map;
 
+/**
+ * {@inheritDoc}
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -30,6 +33,9 @@ public class AccountServiceImpl implements AccountService {
     private final AccountRepository accountRepository;
     private final OutboxClientService outboxClientService;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Mono<AccountFullResponseDto> getByLogin(String login) {
         return userRepository.findByLogin(login)
@@ -42,12 +48,18 @@ public class AccountServiceImpl implements AccountService {
                                 .build()));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Flux<AccountShortDto> getOtherAccounts(String currentLogin) {
         return userRepository.findAllByLoginNot(currentLogin)
                 .map(u -> new AccountShortDto(u.getLogin(), u.getName()));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @Transactional
     public Mono<OperationResultDto<Void>> changeBalance(String login, BigDecimal delta) {

@@ -22,6 +22,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Map;
 
+/**
+ * {@inheritDoc}
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -31,6 +34,9 @@ public class UserServiceImpl implements UserService {
     private final AccountRepository accountRepository;
     private final OutboxClientService outboxClientService;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @Transactional
     public Mono<AccountFullResponseDto> getOrCreateUser(Jwt jwt) {
@@ -43,6 +49,9 @@ public class UserServiceImpl implements UserService {
                 .switchIfEmpty(Mono.defer(() -> registerFromToken(jwt)));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @Transactional
     public Mono<AccountFullResponseDto> updateProfile(String login, UserUpdateDto dto) {
@@ -56,7 +65,9 @@ public class UserServiceImpl implements UserService {
                                 .thenReturn(mapToFullDto(user, acc))));
     }
 
-
+    /**
+     * Обновляет поля пользователя.
+     */
     private void updateUserFields(User user, UserUpdateDto dto) {
         user.setName(dto.getName());
         user.setBirthDate(dto.getBirthDate());
