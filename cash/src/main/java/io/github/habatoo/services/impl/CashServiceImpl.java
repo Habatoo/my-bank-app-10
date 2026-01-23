@@ -24,6 +24,9 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Map;
 
+/**
+ * {@inheritDoc}
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -34,6 +37,9 @@ public class CashServiceImpl implements CashService {
     private final OutboxClientService outboxClientService;
     private final CircuitBreakerRegistry registry;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Mono<OperationResultDto<CashDto>> processCashOperation(String login, CashDto cashDto) {
         BigDecimal amountChange = calculateAmountChange(cashDto);
@@ -115,7 +121,7 @@ public class CashServiceImpl implements CashService {
     }
 
     private Mono<OperationResultDto<Void>> updateAccountBalance(String login, BigDecimal amount) {
-        CircuitBreaker cb = registry.circuitBreaker("account-service-cb");
+        CircuitBreaker cb = registry.circuitBreaker("cash-service-cb");
 
         return webClient.post()
                 .uri(uriBuilder -> uriBuilder

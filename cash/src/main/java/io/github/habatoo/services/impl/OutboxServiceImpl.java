@@ -7,6 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+/**
+ * {@inheritDoc}
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -15,8 +18,7 @@ public class OutboxServiceImpl implements OutboxService {
     private final OutboxClientService outboxClientService;
 
     /**
-     * Запуск каждые 5 секунд.
-     * fixedDelay гарантирует, что следующая итерация начнется через 5 сек после завершения предыдущей.
+     * {@inheritDoc}
      */
     @Scheduled(fixedDelayString = "${spring.application.fixed_write_delay:5000}")
     @Override
@@ -25,8 +27,7 @@ public class OutboxServiceImpl implements OutboxService {
     }
 
     /**
-     * Очистка старых записей.
-     * Запускается раз в 50 секунд.
+     * {@inheritDoc}
      */
     @Scheduled(fixedDelayString = "${spring.application.fixed_clean_delay:50000}")
     @Override
