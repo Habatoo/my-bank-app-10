@@ -5,7 +5,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -44,9 +44,9 @@ public class Notification {
 
     /**
      * Дата и время отправки записи.
-     * Хранится в формате {@link OffsetDateTime} для корректной обработки часовых поясов
+     * Хранится в формате {@link LocalDateTime} для корректной обработки часовых поясов
      * при взаимодействии между сервисами и БД.
      */
     @Column("sent_at")
-    private OffsetDateTime sentAt;
+    private LocalDateTime sentAt;
 }

@@ -21,7 +21,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
@@ -141,7 +141,7 @@ public class CashServiceImpl implements CashService {
                 .username(login)
                 .amount(cashDto.getValue())
                 .operationType(cashDto.getAction())
-                .createdAt(OffsetDateTime.now())
+                .createdAt(LocalDateTime.now())
                 .build();
     }
 

@@ -1,52 +1,61 @@
 plugins {
     id 'java'
     id 'maven-publish'
-    id 'org.springframework.cloud.contract' version '4.3.0'
 }
 
 dependencies {
     implementation project(':microservice-chassis')
     testImplementation project(':account')
     testImplementation project(':cash')
+   // testImplementation project(':gateway')
     testImplementation project(':notification')
     testImplementation project(':transfer')
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
-    testImplementation 'org.springframework.cloud:spring-cloud-contract-wiremock'
+
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:r2dbc'
+
+    testImplementation 'com.squareup.okhttp3:mockwebserver'
+
     testImplementation 'io.micrometer:micrometer-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:junit-jupiter'
-    contractTestImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
-    testImplementation 'io.rest-assured:spring-web-test-client'
     testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
 }
 
-contracts {
-    contractsDslDir = file("src/test/resources/contracts")
-
-//    generatedTestSourcesRoot = file("${project.buildDir}/generated-test-sources/contracts")
-    packageWithBaseClasses = 'io.github.habatoo.base'
-
-    baseClassMappings {
-        baseClassMapping(".*transfer.*", "io.github.habatoo.base.TransferBase")
-    }
-
-    testMode = "WebTestClient"
+jar {
+    enabled = false
 }
 
-sourceSets {
-    test {
-        java {
-            srcDirs += "${project.buildDir}/generated-test-sources/contracts"
-        }
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs.add('-parameters')
+}
+
+tasks.register('integrationTest', Test) {
+    description = 'Runs integration tests.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    shouldRunAfter(tasks.test)
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'failed', 'skipped'
     }
+}
+
+tasks.check {
+    dependsOn tasks.named('integrationTest')
+}
+
+test {
+    useJUnitPlatform()
+    jvmArgs("-XX:+EnableDynamicAgentLoading")
 }

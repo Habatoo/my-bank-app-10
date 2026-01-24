@@ -38,6 +38,7 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   liquibase:
+    change-log: classpath:db/changelog/account/db.changelog-master.yaml
     enabled: ${LIQUIBASE_ENABLED:true}
     default-schema: ${DB_SCHEMA:public}
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_ACCOUNT_PORT:5433}/${DB_ACCOUNT_NAME:account_db}?sslMode=disable

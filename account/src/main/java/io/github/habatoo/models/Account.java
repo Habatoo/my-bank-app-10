@@ -7,7 +7,7 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -58,11 +58,11 @@ public class Account {
      * Сохраняется с указанием часового пояса.
      */
     @Column("created_at")
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
 
     /**
      * Дата и время последнего обновления информации о счету (например, при изменении баланса).
      */
     @Column("updated_at")
-    private OffsetDateTime updatedAt;
+    private LocalDateTime updatedAt;
 }

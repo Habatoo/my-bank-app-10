@@ -15,8 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -65,7 +64,7 @@ public class CashController {
                 .userId(UUID.fromString(userIdStr))
                 .action(operationType)
                 .value(value)
-                .createdAt(OffsetDateTime.now(ZoneOffset.UTC))
+                .createdAt(LocalDateTime.now())
                 .build();
 
         return cashService.processCashOperation(login, cashDto);

@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -16,5 +16,5 @@ public class CashDto {
     private BigDecimal value;
     private OperationType action;
     private Long version;
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
 }

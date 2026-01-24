@@ -20,7 +20,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
@@ -87,7 +87,7 @@ public class TransferServiceImpl implements TransferService {
                 .senderUsername(sender)
                 .targetUsername(target)
                 .amount(amount)
-                .createdAt(OffsetDateTime.now())
+                .createdAt(LocalDateTime.now())
                 .build();
 
         return transfersRepository.save(transfer)
@@ -147,7 +147,7 @@ public class TransferServiceImpl implements TransferService {
     }
 
     private Mono<OperationResultDto<Void>> callAccountService(String login, BigDecimal amount) {
-        CircuitBreaker cb = registry.circuitBreaker("account-service-cb");
+        CircuitBreaker cb = registry.circuitBreaker("transfer-service-cb");
 
         return webClient.post()
                 .uri(uriBuilder -> uriBuilder

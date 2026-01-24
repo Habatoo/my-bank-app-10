@@ -3,7 +3,7 @@ package io.github.habatoo.dto;
 import lombok.Builder;
 import lombok.Data;
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -13,6 +13,6 @@ public class AccountDto {
     private UUID userId;
     private BigDecimal balance;
     private Long version;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime updatedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

@@ -6,7 +6,7 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -39,5 +39,5 @@ public class Transfer {
 
     /** Дата и время совершения операции */
     @Column("created_at")
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
 }

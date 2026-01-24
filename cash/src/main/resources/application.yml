@@ -39,6 +39,7 @@ spring:
 
   liquibase:
     enabled: ${LIQUIBASE_ENABLED:true}
+    change-log: classpath:db/changelog/cash/db.changelog-master.yaml
     default-schema: ${DB_SCHEMA:public}
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_CASH_PORT:5434}/${DB_CASH_NAME:cash_db}
     user: ${DB_USER_NAME:bank_admin}

@@ -6,7 +6,7 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -58,11 +58,11 @@ public class User {
      * Заполняется автоматически при первом входе или создании профиля.
      */
     @Column("created_at")
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
 
     /**
      * Дата и время последнего изменения данных профиля пользователя.
      */
     @Column("updated_at")
-    private OffsetDateTime updatedAt;
+    private LocalDateTime updatedAt;
 }

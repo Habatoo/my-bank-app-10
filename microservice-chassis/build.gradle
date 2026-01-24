@@ -17,7 +17,7 @@ dependencyManagement {
 
 dependencies {
     api platform('org.springframework.boot:spring-boot-dependencies:3.5.8')
-    api platform('org.springframework.cloud:spring-cloud-dependencies:2024.0.0')
+    api platform('org.springframework.cloud:spring-cloud-dependencies:2025.0.0')
 
     api 'org.springframework.boot:spring-boot-starter-webflux'
     api 'org.springframework.boot:spring-boot-starter-security'
@@ -58,6 +58,8 @@ dependencies {
     api 'org.springframework.security:spring-security-test'
     api 'org.springframework.cloud:spring-cloud-starter-contract-verifier:4.3.0'
 
+    api 'com.squareup.okhttp3:mockwebserver:4.12.0'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
@@ -65,12 +67,6 @@ dependencies {
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
-    testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
-    testImplementation 'org.springframework.cloud:spring-cloud-contract-wiremock'
-    testImplementation 'org.testcontainers:junit-jupiter'
-    testImplementation 'org.testcontainers:postgresql'
-    testImplementation 'org.testcontainers:r2dbc'
-    testImplementation 'io.micrometer:micrometer-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

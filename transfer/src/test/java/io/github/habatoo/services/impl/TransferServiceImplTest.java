@@ -68,8 +68,8 @@ class TransferServiceImplTest {
                 .value(AMOUNT)
                 .build();
 
-        CircuitBreaker cb = CircuitBreaker.ofDefaults("account-service-cb");
-        when(registry.circuitBreaker("account-service-cb")).thenReturn(cb);
+        CircuitBreaker cb = CircuitBreaker.ofDefaults("transfer-service-cb");
+        when(registry.circuitBreaker("transfer-service-cb")).thenReturn(cb);
     }
 
     /**
@@ -150,7 +150,7 @@ class TransferServiceImplTest {
     }
 
     /**
-     * Вспомогательный метод для мокирования вызовов WebClient к Account Service.
+     * Вспомогательный метод для мокирования вызовов WebClient к Transfer Service.
      */
     private void mockWebClientResponse(OperationResultDto<Void> response) {
         when(webClient.post()).thenReturn(requestBodyUriSpec);

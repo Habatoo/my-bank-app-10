@@ -4,6 +4,7 @@ import io.github.habatoo.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -42,6 +43,17 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .details(details)
                 .build());
+    }
+
+    /**
+     * 403 — Доступ запрещен (ошибка авторизации на уровне методов @PreAuthorize)
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Mono<ErrorResponse> handleAccessDenied(org.springframework.security.access.AccessDeniedException e) {
+        log.warn("Access denied: {}", e.getMessage());
+
+        return buildResponse("ACCESS_DENIED", "У вас недостаточно прав для выполнения данной операции");
     }
 
     /**

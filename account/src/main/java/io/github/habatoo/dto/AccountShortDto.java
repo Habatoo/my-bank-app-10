@@ -1,7 +1,9 @@
 package io.github.habatoo.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Объект передачи данных (DTO) для краткой информации об аккаунте.
@@ -12,6 +14,8 @@ import lombok.Data;
  * </p>
  */
 @Data
+@Builder
+@NoArgsConstructor(force = true)
 @AllArgsConstructor
 public class AccountShortDto {
 

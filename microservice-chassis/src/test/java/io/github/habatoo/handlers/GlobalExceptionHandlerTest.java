@@ -67,6 +67,29 @@ class GlobalExceptionHandlerTest {
     }
 
     /**
+     * Тест обработки AccessDeniedException (ошибка 403).
+     * Проверяет, что при нехватке прав доступа возвращается корректный код ошибки.
+     */
+    @Test
+    @DisplayName("Обработка отказа доступа (403 FORBIDDEN)")
+    void shouldHandleAccessDeniedExceptionTest() {
+        String errorMessage = "Access is denied";
+        org.springframework.security.access.AccessDeniedException exception =
+                new org.springframework.security.access.AccessDeniedException(errorMessage);
+
+        Mono<ErrorResponse> resultMono = handler.handleAccessDenied(exception);
+
+        StepVerifier.create(resultMono)
+                .assertNext(response -> {
+                    assertThat(response.getCode()).isEqualTo("ACCESS_DENIED");
+                    assertThat(response.getMessage()).isEqualTo(
+                            "У вас недостаточно прав для выполнения данной операции");
+                    assertThat(response.getTimestamp()).isNotNull();
+                })
+                .verifyComplete();
+    }
+
+    /**
      * Тест обработки NoHandlerFoundException (ошибка 404).
      * - устанавливается статус 404.
      */

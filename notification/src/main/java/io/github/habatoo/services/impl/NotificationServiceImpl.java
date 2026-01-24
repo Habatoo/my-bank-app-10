@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 /**
  * {@inheritDoc}
@@ -77,7 +77,7 @@ public class NotificationServiceImpl implements NotificationService {
         return Notification.builder()
                 .username(event.getUsername())
                 .message(event.getMessage())
-                .sentAt(OffsetDateTime.now())
+                .sentAt(LocalDateTime.now())
                 .build();
     }
 }
