@@ -35,6 +35,9 @@ import static org.mockito.Mockito.*;
 @DisplayName("Тестирование логики переводов (TransferServiceImpl)")
 class TransferServiceImplTest {
 
+    private final String SENDER = "sender_user";
+    private final String RECIPIENT = "target_user";
+    private final BigDecimal AMOUNT = new BigDecimal("100.00");
     @Mock
     private TransfersRepository transfersRepository;
     @Mock
@@ -43,7 +46,6 @@ class TransferServiceImplTest {
     private CircuitBreakerRegistry registry;
     @Mock
     private WebClient webClient;
-
     @Mock
     private WebClient.RequestBodyUriSpec requestBodyUriSpec;
     @Mock
@@ -52,13 +54,8 @@ class TransferServiceImplTest {
     private WebClient.ResponseSpec responseSpec;
     @Mock
     private WebClient.RequestBodySpec requestBodySpec;
-
     @InjectMocks
     private TransferServiceImpl transferService;
-
-    private final String SENDER = "sender_user";
-    private final String RECIPIENT = "target_user";
-    private final BigDecimal AMOUNT = new BigDecimal("100.00");
     private TransferDto transferDto;
 
     @BeforeEach

@@ -37,25 +37,19 @@ import static org.mockito.Mockito.*;
 @DisplayName("Юнит-тесты сервиса CashServiceImpl")
 class CashServiceImplTest {
 
+    private final String LOGIN = "test_user";
     @Mock
     private OperationsRepository operationsRepository;
-
     @Mock
     private OutboxClientService outboxClientService;
-
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private WebClient webClient;
-
     @Mock
     private CircuitBreakerRegistry circuitBreakerRegistry;
-
     @Mock
     private CircuitBreaker circuitBreaker;
-
     @InjectMocks
     private CashServiceImpl cashService;
-
-    private final String LOGIN = "test_user";
 
     @BeforeEach
     void setUp() {

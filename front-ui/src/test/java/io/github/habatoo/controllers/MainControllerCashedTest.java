@@ -1,7 +1,7 @@
 package io.github.habatoo.controllers;
 
-import io.github.habatoo.configurations.SecurityChassisAutoConfiguration;
 import io.github.habatoo.cofigurations.ThymeleafConfigurations;
+import io.github.habatoo.configurations.SecurityChassisAutoConfiguration;
 import io.github.habatoo.services.FrontService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

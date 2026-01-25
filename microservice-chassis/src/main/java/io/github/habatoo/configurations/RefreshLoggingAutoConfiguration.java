@@ -1,9 +1,9 @@
 package io.github.habatoo.configurations;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.cloud.context.scope.refresh.RefreshScopeRefreshedEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
 
 /**
  * Автоконфигурация для мониторинга обновления свойств.

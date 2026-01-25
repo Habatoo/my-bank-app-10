@@ -10,15 +10,35 @@
   "resetPasswordAllowed": true,
   "rememberMe": true,
   "loginTheme": "bank-theme",
-  "defaultRoles": [ "USER" ],
+  "defaultRoles": [
+    "USER"
+  ],
   "roles": {
     "realm": [
-      { "name": "USER", "description": "Пользователь банка" },
-      { "name": "ADMIN", "description": "Администратор" },
-      { "name": "ACCOUNT_ACCESS", "description": "Доступ к сервису аккаунтов" },
-      { "name": "CASH_ACCESS", "description": "Доступ к сервису наличных" },
-      { "name": "TRANSFER_ACCESS", "description": "Доступ к сервису переводов" },
-      { "name": "NOTIFICATION_ACCESS", "description": "Доступ к сервису уведомлений" }
+      {
+        "name": "USER",
+        "description": "Пользователь банка"
+      },
+      {
+        "name": "ADMIN",
+        "description": "Администратор"
+      },
+      {
+        "name": "ACCOUNT_ACCESS",
+        "description": "Доступ к сервису аккаунтов"
+      },
+      {
+        "name": "CASH_ACCESS",
+        "description": "Доступ к сервису наличных"
+      },
+      {
+        "name": "TRANSFER_ACCESS",
+        "description": "Доступ к сервису переводов"
+      },
+      {
+        "name": "NOTIFICATION_ACCESS",
+        "description": "Доступ к сервису уведомлений"
+      }
     ]
   },
   "clients": [
@@ -146,19 +166,31 @@
   "scopeMappings": [
     {
       "client": "front-ui",
-      "roles": [ "ACCOUNT_ACCESS", "CASH_ACCESS", "TRANSFER_ACCESS" ]
+      "roles": [
+        "ACCOUNT_ACCESS",
+        "CASH_ACCESS",
+        "TRANSFER_ACCESS"
+      ]
     },
     {
       "client": "account",
-      "roles": [ "NOTIFICATION_ACCESS" ]
+      "roles": [
+        "NOTIFICATION_ACCESS"
+      ]
     },
     {
       "client": "cash",
-      "roles": [ "ACCOUNT_ACCESS", "NOTIFICATION_ACCESS" ]
+      "roles": [
+        "ACCOUNT_ACCESS",
+        "NOTIFICATION_ACCESS"
+      ]
     },
     {
       "client": "transfer",
-      "roles": [ "ACCOUNT_ACCESS", "NOTIFICATION_ACCESS" ]
+      "roles": [
+        "ACCOUNT_ACCESS",
+        "NOTIFICATION_ACCESS"
+      ]
     }
   ],
   "users": [
@@ -169,10 +201,20 @@
       "firstName": "User",
       "lastName": "User",
       "attributes": {
-        "initialSum": ["1000.00"],
-        "birthdate": ["1990-01-01"]
+        "initialSum": [
+          "1000.00"
+        ],
+        "birthdate": [
+          "1990-01-01"
+        ]
       },
-      "credentials": [{ "type": "user", "value": "user", "temporary": false }],
+      "credentials": [
+        {
+          "type": "user",
+          "value": "user",
+          "temporary": false
+        }
+      ],
       "realmRoles": [
         "USER"
       ]
@@ -184,10 +226,20 @@
       "firstName": "Customer",
       "lastName": "Customer",
       "attributes": {
-        "initialSum": ["3000.00"],
-        "birthdate": ["1982-02-01"]
+        "initialSum": [
+          "3000.00"
+        ],
+        "birthdate": [
+          "1982-02-01"
+        ]
       },
-      "credentials": [{ "type": "customer", "value": "customer", "temporary": false }],
+      "credentials": [
+        {
+          "type": "customer",
+          "value": "customer",
+          "temporary": false
+        }
+      ],
       "realmRoles": [
         "USER"
       ]
@@ -196,19 +248,27 @@
       "username": "service-account-account",
       "enabled": true,
       "serviceAccountClientId": "account",
-      "realmRoles": [ "NOTIFICATION_ACCESS" ]
+      "realmRoles": [
+        "NOTIFICATION_ACCESS"
+      ]
     },
     {
       "username": "service-account-cash",
       "enabled": true,
       "serviceAccountClientId": "cash",
-      "realmRoles": [ "ACCOUNT_ACCESS", "NOTIFICATION_ACCESS" ]
+      "realmRoles": [
+        "ACCOUNT_ACCESS",
+        "NOTIFICATION_ACCESS"
+      ]
     },
     {
       "username": "service-account-transfer",
       "enabled": true,
       "serviceAccountClientId": "transfer",
-      "realmRoles": [ "ACCOUNT_ACCESS", "NOTIFICATION_ACCESS" ]
+      "realmRoles": [
+        "ACCOUNT_ACCESS",
+        "NOTIFICATION_ACCESS"
+      ]
     }
   ],
   "browserFlow": "browser",

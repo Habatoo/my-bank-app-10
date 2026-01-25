@@ -34,17 +34,13 @@ import static org.mockito.Mockito.*;
 @DisplayName("Юнит-тесты контроллера UserController")
 class UserControllerTest {
 
+    private final String TEST_USERNAME = "test_user";
     @Mock
     private UserService userService;
-
     @InjectMocks
     private UserController userController;
-
     private WebTestClient webTestClient;
-
     private Jwt jwt;
-
-    private final String TEST_USERNAME = "test_user";
 
     @BeforeEach
     void setUp() {

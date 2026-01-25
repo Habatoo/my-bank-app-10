@@ -70,7 +70,8 @@ public class FrontServiceImpl implements FrontService {
                             .uri(BASE_GATEWAY_URL + "/main/user")
                             .retrieve()
                             .bodyToMono(AccountFullResponseDto.class);
-                });
+                })
+                .switchIfEmpty(Mono.error(new RuntimeException("User data not found")));
     }
 
     private Mono<List<AccountFullResponseDto>> fetchAllAccounts() {
@@ -85,6 +86,7 @@ public class FrontServiceImpl implements FrontService {
                         .transformDeferred(CircuitBreakerOperator.of(cb))
                 )
                 .collectList()
-                .onErrorReturn(Collections.emptyList());
+                .onErrorReturn(Collections.emptyList())
+                .switchIfEmpty(Mono.just(Collections.emptyList()));
     }
 }

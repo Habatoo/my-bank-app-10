@@ -21,10 +21,10 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class NotificationClientService {
 
-    @Value("${spring.application.notification.url:http://localhost:8085/notification}")
-    private String notificationUrl;
     private final WebClient backgroundWebClient;
     private final CircuitBreakerRegistry circuitBreakerRegistry;
+    @Value("${spring.application.notification.url:http://localhost:8085/notification}")
+    private String notificationUrl;
 
     /**
      * Метод для вызова отправки в сервис уведомлений.

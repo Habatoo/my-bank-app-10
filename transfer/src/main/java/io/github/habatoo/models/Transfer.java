@@ -22,22 +22,32 @@ import java.util.UUID;
 @AllArgsConstructor
 public class Transfer {
 
-    /** Уникальный идентификатор транзакции */
+    /**
+     * Уникальный идентификатор транзакции
+     */
     @Id
     private UUID id;
 
-    /** Имя пользователя (логин) отправителя средств */
+    /**
+     * Имя пользователя (логин) отправителя средств
+     */
     @Column("sender_username")
     private String senderUsername;
 
-    /** Имя пользователя (логин) получателя средств */
+    /**
+     * Имя пользователя (логин) получателя средств
+     */
     @Column("target_username")
     private String targetUsername;
 
-    /** Сумма перевода */
+    /**
+     * Сумма перевода
+     */
     private BigDecimal amount;
 
-    /** Дата и время совершения операции */
+    /**
+     * Дата и время совершения операции
+     */
     @Column("created_at")
     private LocalDateTime createdAt;
 }

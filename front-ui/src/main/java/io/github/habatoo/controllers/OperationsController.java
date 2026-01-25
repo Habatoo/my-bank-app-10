@@ -2,9 +2,9 @@ package io.github.habatoo.controllers;
 
 import io.github.habatoo.dto.CashDto;
 import io.github.habatoo.dto.TransferDto;
-import io.github.habatoo.services.CashService;
-import io.github.habatoo.services.TransferService;
-import io.github.habatoo.services.UserService;
+import io.github.habatoo.services.CashFrontService;
+import io.github.habatoo.services.TransferFrontService;
+import io.github.habatoo.services.UserFrontService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,9 +28,9 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class OperationsController {
 
-    private final CashService cashService;
-    private final TransferService transferService;
-    private final UserService userService;
+    private final CashFrontService cashFrontService;
+    private final TransferFrontService transferFrontService;
+    private final UserFrontService userFrontService;
 
     /**
      * Обрабатывает операции с наличными средствами (пополнение или снятие).
@@ -42,7 +42,7 @@ public class OperationsController {
     @PreAuthorize("isAuthenticated()")
     public Mono<String> handleCash(@ModelAttribute CashDto cashDto) {
         log.debug("Обработка операции с наличными: {}", cashDto);
-        return cashService.moveMoney(cashDto);
+        return cashFrontService.moveMoney(cashDto);
     }
 
     /**
@@ -55,7 +55,7 @@ public class OperationsController {
     @PreAuthorize("isAuthenticated()")
     public Mono<String> handleTransfer(@ModelAttribute TransferDto transferDto) {
         log.debug("Обработка перевода средств: {}", transferDto);
-        return transferService.sendMoney(transferDto);
+        return transferFrontService.sendMoney(transferDto);
     }
 
     /**
@@ -72,6 +72,6 @@ public class OperationsController {
     @PreAuthorize("isAuthenticated()")
     public Mono<RedirectView> updateProfile(ServerWebExchange exchange) {
         log.debug("Запрос на обновление профиля пользователя");
-        return userService.updateProfile(exchange);
+        return userFrontService.updateProfile(exchange);
     }
 }

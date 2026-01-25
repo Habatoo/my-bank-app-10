@@ -14,6 +14,15 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class LoggingWebFilter implements WebFilter {
 
+    public static Mono<ServerWebExchange> getExchange() {
+        return Mono.deferContextual(ctx -> {
+            if (ctx.hasKey(ServerWebExchange.class)) {
+                return Mono.just(ctx.get(ServerWebExchange.class));
+            }
+            return Mono.empty();
+        });
+    }
+
     /**
      * Фильтр для входЯщих запросов - игнорирует эндпоинты health-check,
      * которые вызываются инфраструктурой Consul. Проводит замеры времени исполнения запроса.
@@ -39,14 +48,5 @@ public class LoggingWebFilter implements WebFilter {
                             exchange.getRequest().getMethod(), path,
                             exchange.getResponse().getStatusCode(), duration);
                 });
-    }
-
-    public static Mono<ServerWebExchange> getExchange() {
-        return Mono.deferContextual(ctx -> {
-            if (ctx.hasKey(ServerWebExchange.class)) {
-                return Mono.just(ctx.get(ServerWebExchange.class));
-            }
-            return Mono.empty();
-        });
     }
 }

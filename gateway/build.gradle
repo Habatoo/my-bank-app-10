@@ -1,5 +1,5 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'jacoco'
     id 'io.spring.dependency-management' version '1.1.7'
 }
@@ -15,17 +15,58 @@ dependencyManagement {
     }
 }
 
-dependencies {
-    implementation project(':microservice-chassis')
+sourceSets {
+    main {
+        java.srcDir 'src/main/java'
+        resources.srcDir 'src/main/resources'
+    }
 
-    implementation 'org.springframework.boot:spring-boot-starter-webflux'
-    implementation 'org.springframework.cloud:spring-cloud-starter-gateway-server-webflux'
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    test {
+        java.srcDir 'src/test/java'
+        resources.srcDir 'src/test/resources'
+    }
+
+    gatewayIntegrationTest {
+        java.srcDir 'src/gatewayIntegrationTest/java'
+        resources.srcDir 'src/gatewayIntegrationTest/resources'
+
+        compileClasspath += sourceSets.main.output + configurations.testCompileClasspath
+        runtimeClasspath += output + compileClasspath + configurations.testRuntimeClasspath
+    }
+}
+
+configurations {
+    gatewayIntegrationTestImplementation.extendsFrom testImplementation
+    gatewayIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+dependencies {
+    api project(':microservice-chassis')
+
+    api 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    api 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    api 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    gatewayIntegrationTestImplementation 'org.springframework.boot:spring-boot-starter-test'
+    gatewayIntegrationTestImplementation 'io.projectreactor:reactor-test'
+    gatewayIntegrationTestImplementation 'org.springframework.security:spring-security-test'
+
+    gatewayIntegrationTestImplementation 'org.testcontainers:postgresql'
+    gatewayIntegrationTestImplementation 'org.testcontainers:r2dbc'
+    gatewayIntegrationTestImplementation 'org.testcontainers:junit-jupiter'
+
+    gatewayIntegrationTestImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
+    gatewayIntegrationTestImplementation 'com.squareup.okhttp3:mockwebserver'
+    gatewayIntegrationTestImplementation 'io.micrometer:micrometer-test'
+    gatewayIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -42,3 +83,28 @@ test {
     useJUnitPlatform()
     jvmArgs("-XX:+EnableDynamicAgentLoading")
 }
+
+tasks.register('gatewayIntegrationTest', Test) {
+    description = 'Runs gateway integration tests'
+    group = 'verification'
+
+    testClassesDirs = sourceSets.gatewayIntegrationTest.output.classesDirs
+    classpath = sourceSets.gatewayIntegrationTest.runtimeClasspath
+
+    useJUnitPlatform()
+    shouldRunAfter test
+}
+
+tasks.named('processGatewayIntegrationTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('processResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('processTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+check.dependsOn gatewayIntegrationTest

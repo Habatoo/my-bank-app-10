@@ -1,5 +1,5 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'jacoco'
     id 'io.spring.dependency-management' version '1.1.7'
 }
@@ -15,18 +15,58 @@ dependencyManagement {
     }
 }
 
-dependencies {
-    implementation project(':microservice-chassis')
+sourceSets {
+    main {
+        java.srcDir 'src/main/java'
+        resources.srcDir 'src/main/resources'
+    }
 
-    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    test {
+        java.srcDir 'src/test/java'
+        resources.srcDir 'src/test/resources'
+    }
+
+    frontIntegrationTest {
+        java.srcDir 'src/frontIntegrationTest/java'
+        resources.srcDir 'src/frontIntegrationTest/resources'
+
+        compileClasspath += sourceSets.main.output + configurations.testCompileClasspath
+        runtimeClasspath += output + compileClasspath + configurations.testRuntimeClasspath
+    }
+}
+
+configurations {
+    frontIntegrationTestImplementation.extendsFrom testImplementation
+    frontIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+dependencies {
+    api project(':microservice-chassis')
+
+    api 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    api 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    api 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    frontIntegrationTestImplementation 'org.springframework.boot:spring-boot-starter-test'
+    frontIntegrationTestImplementation 'io.projectreactor:reactor-test'
+    frontIntegrationTestImplementation 'org.springframework.security:spring-security-test'
+
+    frontIntegrationTestImplementation 'org.testcontainers:postgresql'
+    frontIntegrationTestImplementation 'org.testcontainers:r2dbc'
+    frontIntegrationTestImplementation 'org.testcontainers:junit-jupiter'
+
+    frontIntegrationTestImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
+    frontIntegrationTestImplementation 'com.squareup.okhttp3:mockwebserver'
+    frontIntegrationTestImplementation 'io.micrometer:micrometer-test'
+    frontIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -43,3 +83,28 @@ test {
     useJUnitPlatform()
     jvmArgs("-XX:+EnableDynamicAgentLoading")
 }
+
+tasks.register('frontIntegrationTest', Test) {
+    description = 'Runs front integration tests'
+    group = 'verification'
+
+    testClassesDirs = sourceSets.frontIntegrationTest.output.classesDirs
+    classpath = sourceSets.frontIntegrationTest.runtimeClasspath
+
+    useJUnitPlatform()
+    shouldRunAfter test
+}
+
+tasks.named('processFrontIntegrationTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('processResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('processTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+check.dependsOn frontIntegrationTest

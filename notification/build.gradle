@@ -1,5 +1,5 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'jacoco'
     id 'io.spring.dependency-management' version '1.1.7'
 }
@@ -15,19 +15,57 @@ dependencyManagement {
     }
 }
 
-dependencies {
-    implementation project(':microservice-chassis')
-    testImplementation project(':microservice-chassis')
+sourceSets {
+    main {
+        java.srcDir 'src/main/java'
+        resources.srcDir 'src/main/resources'
+    }
 
-    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    test {
+        java.srcDir 'src/test/java'
+        resources.srcDir 'src/test/resources'
+    }
+
+    notificationIntegrationTest {
+        java.srcDir 'src/notificationIntegrationTest/java'
+        resources.srcDir 'src/notificationIntegrationTest/resources'
+
+        compileClasspath += sourceSets.main.output + configurations.testCompileClasspath
+        runtimeClasspath += output + compileClasspath + configurations.testRuntimeClasspath
+    }
+}
+
+configurations {
+    notificationIntegrationTestImplementation.extendsFrom testImplementation
+    notificationIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+dependencies {
+    api project(':microservice-chassis')
+
+    api 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    api 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    notificationIntegrationTestImplementation 'org.springframework.boot:spring-boot-starter-test'
+    notificationIntegrationTestImplementation 'io.projectreactor:reactor-test'
+    notificationIntegrationTestImplementation 'org.springframework.security:spring-security-test'
+
+    notificationIntegrationTestImplementation 'org.testcontainers:postgresql'
+    notificationIntegrationTestImplementation 'org.testcontainers:r2dbc'
+    notificationIntegrationTestImplementation 'org.testcontainers:junit-jupiter'
+
+    notificationIntegrationTestImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
+    notificationIntegrationTestImplementation 'com.squareup.okhttp3:mockwebserver'
+    notificationIntegrationTestImplementation 'io.micrometer:micrometer-test'
+    notificationIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -44,3 +82,24 @@ test {
     useJUnitPlatform()
     jvmArgs("-XX:+EnableDynamicAgentLoading")
 }
+
+tasks.register('notificationIntegrationTest', Test) {
+    description = 'Runs notification integration tests'
+    group = 'verification'
+
+    testClassesDirs = sourceSets.notificationIntegrationTest.output.classesDirs
+    classpath = sourceSets.notificationIntegrationTest.runtimeClasspath
+
+    useJUnitPlatform()
+    shouldRunAfter test
+}
+
+tasks.named('processNotificationIntegrationTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('processResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+check.dependsOn notificationIntegrationTest

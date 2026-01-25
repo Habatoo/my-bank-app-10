@@ -23,10 +23,6 @@ class ResiliencePropertiesTest {
                     "spring.resilience.permitted-number-of-calls-in-half-open-state=3"
             );
 
-    @EnableConfigurationProperties(ResilienceProperties.class)
-    static class TestConfig {
-    }
-
     /**
      * Проверяет, что конфигурационные параметры Resilience корретно подгружаются
      * и бин {@link ResilienceProperties} связывается из источника настроек.
@@ -42,5 +38,9 @@ class ResiliencePropertiesTest {
             assertThat(props.waitDurationInOpenState()).isEqualTo(10);
             assertThat(props.permittedNumberOfCallsInHalfOpenState()).isEqualTo(3);
         });
+    }
+
+    @EnableConfigurationProperties(ResilienceProperties.class)
+    static class TestConfig {
     }
 }

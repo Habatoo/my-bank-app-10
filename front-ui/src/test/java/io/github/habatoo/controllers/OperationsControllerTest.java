@@ -2,9 +2,9 @@ package io.github.habatoo.controllers;
 
 import io.github.habatoo.dto.CashDto;
 import io.github.habatoo.dto.TransferDto;
-import io.github.habatoo.services.CashService;
-import io.github.habatoo.services.TransferService;
-import io.github.habatoo.services.UserService;
+import io.github.habatoo.services.CashFrontService;
+import io.github.habatoo.services.TransferFrontService;
+import io.github.habatoo.services.UserFrontService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,19 +31,19 @@ import static org.mockito.Mockito.*;
 class OperationsControllerTest {
 
     @Mock
-    private CashService cashService;
+    private CashFrontService cashFrontService;
 
     @Mock
-    private TransferService transferService;
+    private TransferFrontService transferFrontService;
 
     @Mock
-    private UserService userService;
+    private UserFrontService userFrontService;
 
     @InjectMocks
     private OperationsController operationsController;
 
     @Test
-    @DisplayName("Тест handleCash: проверка вызова cashService")
+    @DisplayName("Тест handleCash: проверка вызова cashFrontService")
     void handleCash_ShouldReturnRedirectString() {
         CashDto cashDto = CashDto.builder()
                 .value(new BigDecimal("1000"))
@@ -51,7 +51,7 @@ class OperationsControllerTest {
                 .build();
         String expectedRedirect = "redirect:/main?info=success";
 
-        when(cashService.moveMoney(cashDto)).thenReturn(Mono.just(expectedRedirect));
+        when(cashFrontService.moveMoney(cashDto)).thenReturn(Mono.just(expectedRedirect));
 
         Mono<String> result = operationsController.handleCash(cashDto);
 
@@ -59,16 +59,16 @@ class OperationsControllerTest {
                 .expectNext(expectedRedirect)
                 .verifyComplete();
 
-        verify(cashService, times(1)).moveMoney(cashDto);
+        verify(cashFrontService, times(1)).moveMoney(cashDto);
     }
 
     @Test
-    @DisplayName("Тест handleTransfer: проверка вызова transferService")
+    @DisplayName("Тест handleTransfer: проверка вызова transferFrontService")
     void handleTransfer_ShouldReturnRedirectString() {
         TransferDto transferDto = new TransferDto();
         String expectedRedirect = "redirect:/main?info=transferred";
 
-        when(transferService.sendMoney(transferDto)).thenReturn(Mono.just(expectedRedirect));
+        when(transferFrontService.sendMoney(transferDto)).thenReturn(Mono.just(expectedRedirect));
 
         Mono<String> result = operationsController.handleTransfer(transferDto);
 
@@ -76,16 +76,16 @@ class OperationsControllerTest {
                 .expectNext(expectedRedirect)
                 .verifyComplete();
 
-        verify(transferService, times(1)).sendMoney(transferDto);
+        verify(transferFrontService, times(1)).sendMoney(transferDto);
     }
 
     @Test
-    @DisplayName("Тест updateProfile: проверка вызова userService")
+    @DisplayName("Тест updateProfile: проверка вызова userFrontService")
     void updateProfile_ShouldReturnRedirectView() {
         ServerWebExchange exchange = mock(ServerWebExchange.class);
         RedirectView expectedView = new RedirectView("/main");
 
-        when(userService.updateProfile(exchange)).thenReturn(Mono.just(expectedView));
+        when(userFrontService.updateProfile(exchange)).thenReturn(Mono.just(expectedView));
 
         Mono<RedirectView> result = operationsController.updateProfile(exchange);
 
@@ -93,6 +93,6 @@ class OperationsControllerTest {
                 .assertNext(view -> assertEquals("/main", view.getUrl()))
                 .verifyComplete();
 
-        verify(userService, times(1)).updateProfile(exchange);
+        verify(userFrontService, times(1)).updateProfile(exchange);
     }
 }

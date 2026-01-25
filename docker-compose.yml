@@ -7,7 +7,7 @@ services:
     ports:
       - "8500:8500"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8500/v1/status/leader"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8500/v1/status/leader" ]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -29,7 +29,7 @@ services:
     ports:
       - "8082:8082"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/health/live"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8082/health/live" ]
       interval: 10s
       timeout: 5s
       retries: 10

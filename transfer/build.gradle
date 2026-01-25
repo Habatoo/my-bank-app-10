@@ -1,5 +1,5 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'jacoco'
     id 'io.spring.dependency-management' version '1.1.7'
 }
@@ -15,19 +15,57 @@ dependencyManagement {
     }
 }
 
-dependencies {
-    implementation project(':microservice-chassis')
+sourceSets {
+    main {
+        java.srcDir 'src/main/java'
+        resources.srcDir 'src/main/resources'
+    }
 
-    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    test {
+        java.srcDir 'src/test/java'
+        resources.srcDir 'src/test/resources'
+    }
+
+    transferIntegrationTest {
+        java.srcDir 'src/transferIntegrationTest/java'
+        resources.srcDir 'src/transferIntegrationTest/resources'
+
+        compileClasspath += sourceSets.main.output + configurations.testCompileClasspath
+        runtimeClasspath += output + compileClasspath + configurations.testRuntimeClasspath
+    }
+}
+
+configurations {
+    transferIntegrationTestImplementation.extendsFrom testImplementation
+    transferIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+dependencies {
+    api project(':microservice-chassis')
+
+    api 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    api 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    transferIntegrationTestImplementation 'org.springframework.boot:spring-boot-starter-test'
+    transferIntegrationTestImplementation 'io.projectreactor:reactor-test'
+    transferIntegrationTestImplementation 'org.springframework.security:spring-security-test'
+
+    transferIntegrationTestImplementation 'org.testcontainers:postgresql'
+    transferIntegrationTestImplementation 'org.testcontainers:r2dbc'
+    transferIntegrationTestImplementation 'org.testcontainers:junit-jupiter'
+
+    transferIntegrationTestImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
+    transferIntegrationTestImplementation 'com.squareup.okhttp3:mockwebserver'
+    transferIntegrationTestImplementation 'io.micrometer:micrometer-test'
+    transferIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -44,3 +82,24 @@ test {
     useJUnitPlatform()
     jvmArgs("-XX:+EnableDynamicAgentLoading")
 }
+
+tasks.register('transferIntegrationTest', Test) {
+    description = 'Runs transfer integration tests'
+    group = 'verification'
+
+    testClassesDirs = sourceSets.transferIntegrationTest.output.classesDirs
+    classpath = sourceSets.transferIntegrationTest.runtimeClasspath
+
+    useJUnitPlatform()
+    shouldRunAfter test
+}
+
+tasks.named('processTransferIntegrationTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('processResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+check.dependsOn transferIntegrationTest

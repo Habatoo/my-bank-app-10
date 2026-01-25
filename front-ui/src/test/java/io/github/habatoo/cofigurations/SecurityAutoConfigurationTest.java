@@ -1,9 +1,9 @@
 package io.github.habatoo.cofigurations;
 
-import io.github.habatoo.services.CashService;
+import io.github.habatoo.services.CashFrontService;
 import io.github.habatoo.services.FrontService;
-import io.github.habatoo.services.TransferService;
-import io.github.habatoo.services.UserService;
+import io.github.habatoo.services.TransferFrontService;
+import io.github.habatoo.services.UserFrontService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,13 +36,13 @@ class SecurityAutoConfigurationTest {
     private FrontService frontService;
 
     @MockitoBean
-    private CashService cashService;
+    private CashFrontService cashFrontService;
 
     @MockitoBean
-    private TransferService transferService;
+    private TransferFrontService transferFrontService;
 
     @MockitoBean
-    private UserService userService;
+    private UserFrontService userFrontService;
 
     /**
      * Проверяет, что доступ к защищенным ресурсам (например, /main)

@@ -33,21 +33,17 @@ import static org.mockito.Mockito.*;
 @DisplayName("Юнит-тесты сервиса UserServiceImpl")
 class UserServiceImplTest {
 
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private AccountRepository accountRepository;
-
-    @Mock
-    private OutboxClientService outboxClientService;
-
-    @InjectMocks
-    private UserServiceImpl userService;
-
-    private Jwt jwt;
     private final String LOGIN = "test_user";
     private final UUID USER_ID = UUID.randomUUID();
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private AccountRepository accountRepository;
+    @Mock
+    private OutboxClientService outboxClientService;
+    @InjectMocks
+    private UserServiceImpl userService;
+    private Jwt jwt;
 
     @BeforeEach
     void setUp() {

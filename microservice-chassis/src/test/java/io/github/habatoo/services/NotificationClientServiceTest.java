@@ -32,29 +32,22 @@ import static org.mockito.Mockito.*;
 @DisplayName("Юнит-тесты сервиса NotificationClientService")
 class NotificationClientServiceTest {
 
+    private final String testUrl = "http://localhost:8085/notification";
     @Mock
     private WebClient backgroundWebClient;
-
     @Mock
     private CircuitBreakerRegistry circuitBreakerRegistry;
-
     @Mock
     private CircuitBreaker circuitBreaker;
-
     @InjectMocks
     private NotificationClientService notificationClientService;
-
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private WebClient.RequestBodyUriSpec requestBodyUriSpec;
-
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private WebClient.ResponseSpec responseSpec;
-
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     @SuppressWarnings("rawtype")
     private WebClient.RequestHeadersSpec requestHeadersSpec;
-
-    private final String testUrl = "http://localhost:8085/notification";
     private NotificationEvent testEvent;
 
     @BeforeEach

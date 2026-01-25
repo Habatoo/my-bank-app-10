@@ -25,6 +25,27 @@ import static org.mockito.Mockito.mock;
 @DisplayName("Юнит-тесты для SecurityAutoConfiguration")
 class SecurityAutoConfigurationTest {
 
+    private final ReactiveWebApplicationContextRunner contextRunner = new ReactiveWebApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(SecurityAutoConfiguration.class))
+            .withUserConfiguration(MockSecurityDependenciesConfiguration.class);
+
+    /**
+     * Тест проверяет, что основной бин цепочки фильтров безопасности {@link SecurityWebFilterChain}
+     * успешно создается и регистрируется в контексте под стандартным именем.
+     * <p>
+     * Это гарантирует, что конфигурация {@link SecurityAutoConfiguration} работоспособна
+     * при наличии всех требуемых зависимостей.
+     * </p>
+     */
+    @Test
+    @DisplayName("Должен регистрировать основные бины безопасности")
+    void shouldRegisterSecurityBeans() {
+        contextRunner.run(context -> {
+            assertThat(context).hasSingleBean(SecurityWebFilterChain.class);
+            assertThat(context).hasBean("securityWebFilterChain");
+        });
+    }
+
     /**
      * Статический конфигурационный класс для имитации необходимых зависимостей безопасности.
      * <p>
@@ -54,26 +75,5 @@ class SecurityAutoConfigurationTest {
         public ReactiveJwtDecoder reactiveJwtDecoder() {
             return mock(ReactiveJwtDecoder.class);
         }
-    }
-
-    private final ReactiveWebApplicationContextRunner contextRunner = new ReactiveWebApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(SecurityAutoConfiguration.class))
-            .withUserConfiguration(MockSecurityDependenciesConfiguration.class);
-
-    /**
-     * Тест проверяет, что основной бин цепочки фильтров безопасности {@link SecurityWebFilterChain}
-     * успешно создается и регистрируется в контексте под стандартным именем.
-     * <p>
-     * Это гарантирует, что конфигурация {@link SecurityAutoConfiguration} работоспособна
-     * при наличии всех требуемых зависимостей.
-     * </p>
-     */
-    @Test
-    @DisplayName("Должен регистрировать основные бины безопасности")
-    void shouldRegisterSecurityBeans() {
-        contextRunner.run(context -> {
-            assertThat(context).hasSingleBean(SecurityWebFilterChain.class);
-            assertThat(context).hasBean("securityWebFilterChain");
-        });
     }
 }

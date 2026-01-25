@@ -30,18 +30,15 @@ import static org.mockito.Mockito.*;
 @DisplayName("Юнит-тесты сервиса OutboxClientService")
 class OutboxClientServiceTest {
 
+    private final UUID entityId = UUID.randomUUID();
     @Mock
     private OutboxRepository outboxRepository;
-
     @Mock
     private NotificationClientService notificationClient;
-
     @InjectMocks
     private OutboxClientService outboxClientService;
-
     private NotificationEvent testEvent;
     private Outbox testEntity;
-    private final UUID entityId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {

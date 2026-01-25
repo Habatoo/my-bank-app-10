@@ -3,9 +3,9 @@ package io.github.habatoo.controllers;
 import io.github.habatoo.configurations.SecurityChassisAutoConfiguration;
 import io.github.habatoo.dto.CashDto;
 import io.github.habatoo.dto.TransferDto;
-import io.github.habatoo.services.CashService;
-import io.github.habatoo.services.TransferService;
-import io.github.habatoo.services.UserService;
+import io.github.habatoo.services.CashFrontService;
+import io.github.habatoo.services.TransferFrontService;
+import io.github.habatoo.services.UserFrontService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -46,13 +46,13 @@ class OperationsControllerCashedTest {
     private WebTestClient webTestClient;
 
     @MockitoBean
-    private CashService cashService;
+    private CashFrontService cashFrontService;
 
     @MockitoBean
-    private TransferService transferService;
+    private TransferFrontService transferFrontService;
 
     @MockitoBean
-    private UserService userService;
+    private UserFrontService userFrontService;
 
     @MockitoBean
     private ReactiveClientRegistrationRepository clientRegistrationRepository;
@@ -66,7 +66,7 @@ class OperationsControllerCashedTest {
     @Test
     @DisplayName("POST /cash - Успешный редирект после операции с наличными")
     void handleCashSuccess() {
-        when(cashService.moveMoney(any(CashDto.class)))
+        when(cashFrontService.moveMoney(any(CashDto.class)))
                 .thenReturn(Mono.just("redirect:/main?info=Success"));
 
         webTestClient
@@ -84,7 +84,7 @@ class OperationsControllerCashedTest {
     @Test
     @DisplayName("POST /transfer - Успешный редирект после перевода средств")
     void handleTransferSuccess() {
-        when(transferService.sendMoney(any(TransferDto.class)))
+        when(transferFrontService.sendMoney(any(TransferDto.class)))
                 .thenReturn(Mono.just("redirect:/main?info=TransferDone"));
 
         webTestClient
@@ -104,7 +104,7 @@ class OperationsControllerCashedTest {
     void updateProfileSuccess() {
         RedirectView redirectView = new RedirectView("/main?info=ProfileUpdated");
 
-        when(userService.updateProfile(any(ServerWebExchange.class)))
+        when(userFrontService.updateProfile(any(ServerWebExchange.class)))
                 .thenReturn(Mono.just(redirectView));
 
         webTestClient
