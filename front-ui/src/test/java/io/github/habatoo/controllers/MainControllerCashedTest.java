@@ -86,7 +86,6 @@ class MainControllerCashedTest {
                 .thenReturn(Mono.just(rendering));
 
         webTestClient
-                //.mutateWith(mockJwt())
                 .mutateWith(csrf())
                 .mutateWith(mockJwt()
                         .jwt(jwt -> jwt
