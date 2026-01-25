@@ -9,6 +9,11 @@ COPY build.gradle settings.gradle ./
 RUN chmod +x gradlew
 
 COPY microservice-chassis/ microservice-chassis/
+COPY account/ account/
+COPY gateway/ gateway/
+COPY cash/ cash/
+COPY notification/ notification/
+COPY front-ui/ front-ui/
 COPY transfer/ transfer/
 
 RUN ./gradlew :transfer:bootJar -x test --no-daemon

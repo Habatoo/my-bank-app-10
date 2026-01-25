@@ -1,56 +1,52 @@
-variable "TAG" {
-  default = "latest"
-}
-
 group "default" {
-  targets = ["gateway", "account", "cash", "transfer", "notification", "front-ui"]
+  targets = [
+    "transfer",
+    "gateway",
+    "account",
+    "cash",
+    "notification",
+    "front-ui"
+  ]
 }
 
-target "_java_base" {
-  context = "."
-  args = {
-    TAG = "${TAG}"
-  }
+target "base" {
+  context    = "."
+  platforms  = ["linux/amd64"]
+  pull       = true
 }
 
-# Gateway
-target "gateway" {
-  inherits = ["_java_base"]
-  dockerfile = "gateway/Dockerfile"
-  tags = ["my-bank/gateway:${TAG}"]
-}
-
-# Account
-target "account" {
-  inherits = ["_java_base"]
-  dockerfile = "account/Dockerfile"
-  tags = ["my-bank/account:${TAG}"]
-}
-
-# Cash
-target "cash" {
-  inherits = ["_java_base"]
-  dockerfile = "cash/Dockerfile"
-  tags = ["my-bank/cash:${TAG}"]
-}
-
-# Transfer
 target "transfer" {
-  inherits = ["_java_base"]
+  inherits   = ["base"]
   dockerfile = "transfer/Dockerfile"
-  tags = ["my-bank/transfer:${TAG}"]
+  tags       = ["my-bank/transfer:latest"]
 }
 
-# Notification
+target "gateway" {
+  inherits   = ["base"]
+  dockerfile = "gateway/Dockerfile"
+  tags       = ["my-bank/gateway:latest"]
+}
+
+target "account" {
+  inherits   = ["base"]
+  dockerfile = "account/Dockerfile"
+  tags       = ["my-bank/account:latest"]
+}
+
+target "cash" {
+  inherits   = ["base"]
+  dockerfile = "cash/Dockerfile"
+  tags       = ["my-bank/cash:latest"]
+}
+
 target "notification" {
-  inherits = ["_java_base"]
+  inherits   = ["base"]
   dockerfile = "notification/Dockerfile"
-  tags = ["my-bank/notification:${TAG}"]
+  tags       = ["my-bank/notification:latest"]
 }
 
-# Front UI
 target "front-ui" {
-  inherits = ["_java_base"]
+  inherits   = ["base"]
   dockerfile = "front-ui/Dockerfile"
-  tags = ["my-bank/front-ui:${TAG}"]
+  tags       = ["my-bank/front-ui:latest"]
 }
