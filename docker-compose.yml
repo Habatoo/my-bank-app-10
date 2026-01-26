@@ -1,55 +1,258 @@
 services:
-  template:
-    build: microservice-chassis
-    ports:
-      - "${SERVER_PORT}:${SERVER_PORT}"
-    env_file: ./env/.env
-    depends_on:
-      db:
-        condition: service_healthy
-      consul:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - network
-
-  db:
-    image: postgres:17-alpine
-    container_name: db
-    restart: unless-stopped
-    env_file: ./env/.env
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - db:/var/lib/postgresql/data
-    networks:
-      - network
 
   consul:
     image: hashicorp/consul:1.20
+    container_name: consul
     command: [ "agent","-dev","-ui","-client","0.0.0.0", "-log-level","ERROR" ]
     ports:
-      - "8500:8500"
+      - "${CONSUL_PORT:-8500}:8500"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8500/v1/status/leader"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8500/v1/status/leader" ]
       interval: 5s
       timeout: 3s
       retries: 5
     networks:
-      - network
+      - bank-network
 
-volumes:
-  db:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.0
+    container_name: keycloak
+    command: >
+      start-dev --import-realm --http-port=8082 --http-enabled=true 
+      --hostname-strict=false 
+      --proxy-headers=xforwarded
+    env_file: ./env/.env
+    volumes:
+      - ./env/realm-export.json:/opt/keycloak/data/import/realm.json:ro
+      - ./env/keycloak-theme/bank-theme:/opt/keycloak/themes/bank-theme:ro
+      - keycloak_data:/opt/keycloak/data
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8082/health/live" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - bank-network
+
+  account_db:
+    image: postgres:17-alpine
+    container_name: account-db
+    restart: unless-stopped
+    env_file: ./env/.env
+    environment:
+      POSTGRES_DB: ${DB_ACCOUNT_NAME}
+      POSTGRES_USER: ${DB_USER_NAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_ACCOUNT_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER_NAME} -d ${DB_ACCOUNT_NAME}"]
+      interval: 5s
+    networks:
+      - bank-network
+
+  cash_db:
+    image: postgres:17-alpine
+    container_name: cash-db
+    restart: unless-stopped
+    env_file: ./env/.env
+    environment:
+      POSTGRES_DB: ${DB_CASH_NAME}
+      POSTGRES_USER: ${DB_USER_NAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_CASH_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER_NAME} -d ${DB_CASH_NAME}"]
+    networks:
+      - bank-network
+
+  notification_db:
+    image: postgres:17-alpine
+    container_name: notification-db
+    restart: unless-stopped
+    env_file: ./env/.env
+    environment:
+      POSTGRES_DB: ${DB_NOTIFICATION_NAME}
+      POSTGRES_USER: ${DB_USER_NAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_NOTIFICATION_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER_NAME} -d ${DB_NOTIFICATION_NAME}"]
+    networks:
+      - bank-network
+
+  transfer_db:
+    image: postgres:17-alpine
+    container_name: transfer-db
+    restart: unless-stopped
+    env_file: ./env/.env
+    environment:
+      POSTGRES_DB: ${DB_TRANSFER_NAME}
+      POSTGRES_USER: ${DB_USER_NAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_TRANSFER_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER_NAME} -d ${DB_TRANSFER_NAME}"]
+    networks:
+      - bank-network
+
+  gateway:
+    image: my-bank/gateway:latest
+    build:
+      context: .
+      dockerfile: ./gateway/Dockerfile
+      args:
+        SERVICE_NAME: gateway
+    container_name: gateway
+    ports:
+      - "${SPRING_GATEWAY_PORT}:8090"
+    env_file: ./env/.env
+    environment:
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
+      KEYCLOAK_HOST: keycloak
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_GATEWAY_SECRET: ${KEYCLOAK_GATEWAY_SECRET}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8082/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+    depends_on:
+      consul: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+    networks:
+      - bank-network
+
+  account:
+    image: my-bank/account:latest
+    build:
+      context: .
+      dockerfile: ./account/Dockerfile
+      args:
+        SERVICE_NAME: account
+    container_name: account
+    env_file: ./env/.env
+    environment:
+      CONSUL_HOST: consul
+      DB_HOST: account_db
+      DB_ACCOUNT_PORT: 5432
+      DB_ACCOUNT_NAME: ${DB_ACCOUNT_NAME}
+      DB_USER_NAME: ${DB_USER_NAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      KEYCLOAK_HOST: keycloak
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_ACCOUNT_SECRET: ${KEYCLOAK_ACCOUNT_SECRET}
+      LIQUIBASE_ENABLED: ${LIQUIBASE_ENABLED}
+    depends_on:
+      account_db: { condition: service_healthy }
+      consul: { condition: service_healthy }
+    networks:
+      - bank-network
+
+  cash:
+    image: my-bank/cash:latest
+    build:
+      context: .
+      dockerfile: ./cash/Dockerfile
+      args:
+        SERVICE_NAME: cash
+    container_name: cash
+    env_file: ./env/.env
+    environment:
+      CONSUL_HOST: consul
+      DB_HOST: cash_db
+      DB_ACCOUNT_PORT: 5432
+      DB_CASH_NAME: ${DB_CASH_NAME}
+      DB_USER_NAME: ${DB_USER_NAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      KEYCLOAK_HOST: keycloak
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CASH_SECRET: ${KEYCLOAK_CASH_SECRET}
+    depends_on:
+      cash_db: { condition: service_healthy }
+    networks:
+      - bank-network
+
+  transfer:
+    image: my-bank/transfer:latest
+    build:
+      context: .
+      dockerfile: ./transfer/Dockerfile
+      args:
+        SERVICE_NAME: transfer
+    container_name: transfer
+    env_file: ./env/.env
+    environment:
+      CONSUL_HOST: consul
+      DB_HOST: transfer_db
+      DB_ACCOUNT_PORT: 5432
+      DB_TRANSFER_NAME: ${DB_TRANSFER_NAME}
+      DB_USER_NAME: ${DB_USER_NAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      KEYCLOAK_HOST: keycloak
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_TRANSFER_SECRET: ${KEYCLOAK_TRANSFER_SECRET}
+    depends_on:
+      transfer_db: { condition: service_healthy }
+    networks:
+      - bank-network
+
+  notification:
+    image: my-bank/notification:latest
+    build:
+      context: .
+      dockerfile: ./notification/Dockerfile
+      args:
+        SERVICE_NAME: notification
+    container_name: notification
+    env_file: ./env/.env
+    environment:
+      CONSUL_HOST: consul
+      DB_HOST: notification_db
+      DB_ACCOUNT_PORT: 5432
+      DB_NOTIFICATION_NAME: ${DB_NOTIFICATION_NAME}
+      DB_USER_NAME: ${DB_USER_NAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      KEYCLOAK_HOST: keycloak
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_NOTIFICATION_SECRET: ${KEYCLOAK_NOTIFICATION_SECRET}
+    depends_on:
+      notification_db: { condition: service_healthy }
+    networks:
+      - bank-network
+
+  front-ui:
+    image: my-bank/front-ui":latest
+    build:
+      context: .
+      dockerfile: ./front-ui/Dockerfile
+      args:
+        SERVICE_NAME: front-ui
+    container_name: front-ui
+    ports:
+      - "${SPRING_FRONT_UI_PORT}:8081"
+    env_file: ./env/.env
+    environment:
+      CONSUL_HOST: consul
+      SPRING_FRONT_UI_PORT: 8081
+      KEYCLOAK_FRONT_UI_SECRET: ${KEYCLOAK_FRONT_UI_SECRET}
+      KEYCLOAK_HOST: localhost
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+    depends_on:
+      gateway: { condition: service_started }
+      consul: { condition: service_healthy }
+    networks:
+      - bank-network
 
 networks:
-  network:
+  bank-network:
     driver: bridge
+
+volumes:
+  account_db_data:
+  cash_db_data:
+  notification_db_data:
+  transfer_db_data:
+  keycloak_data:

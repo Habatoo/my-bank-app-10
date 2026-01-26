@@ -1,0 +1,14 @@
+server:
+  port: 0
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  cloud:
+    compatibility-verifier: false
+    consul:
+      enabled: false
+    config:
+      enabled: false
+  liquibase:
+    enabled: false

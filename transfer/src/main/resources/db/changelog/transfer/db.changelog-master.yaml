@@ -1,0 +1,4 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/transfer/001_init_structure.yaml
+      context: dev,test,default

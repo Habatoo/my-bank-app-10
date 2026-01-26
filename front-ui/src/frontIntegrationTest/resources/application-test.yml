@@ -1,0 +1,24 @@
+server:
+  port: 0
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  cloud:
+    compatibility-verifier: false
+    consul:
+      enabled: false
+    config:
+      enabled: false
+  liquibase:
+    enabled: false
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      gateway-cb:
+        slidingWindowSize: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        minimumNumberOfCalls: 2
+        failureRateThreshold: 50
+        waitDurationInOpenState: 1s

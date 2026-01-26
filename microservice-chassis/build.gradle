@@ -1,0 +1,86 @@
+plugins {
+    id 'java-library'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'org.springframework.boot:spring-boot-dependencies:3.5.8'
+        mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2025.0.0'
+    }
+}
+
+dependencies {
+    api platform('org.springframework.boot:spring-boot-dependencies:3.5.8')
+    api platform('org.springframework.cloud:spring-cloud-dependencies:2025.0.0')
+
+    api 'org.springframework.boot:spring-boot-starter-webflux'
+    api 'org.springframework.boot:spring-boot-starter-security'
+    api 'org.springframework.boot:spring-boot-starter-validation'
+    api 'org.springframework.boot:spring-boot-starter-actuator'
+
+    api 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    api 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    api 'org.springframework.security:spring-security-oauth2-jose'
+
+    api 'org.springframework.cloud:spring-cloud-starter-consul-discovery'
+    api 'org.springframework.cloud:spring-cloud-starter-consul-config'
+    api 'org.springframework.cloud:spring-cloud-starter-loadbalancer'
+    api 'org.springframework.cloud:spring-cloud-starter'
+
+    api 'io.github.resilience4j:resilience4j-reactor'
+    api 'io.github.resilience4j:resilience4j-spring-boot3'
+    api 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
+
+    api 'org.springframework.boot:spring-boot-starter-data-r2dbc'
+    api 'org.springframework.boot:spring-boot-starter-data-jpa'
+    api 'org.postgresql:postgresql'
+    api 'org.postgresql:r2dbc-postgresql'
+    api 'org.liquibase:liquibase-core'
+
+    api 'io.micrometer:micrometer-observation'
+    api 'io.micrometer:micrometer-tracing'
+    api 'io.micrometer:micrometer-tracing-bridge-otel'
+
+    api 'org.mapstruct:mapstruct:1.6.3'
+    api 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    api 'org.projectlombok:lombok:1.18.34'
+
+    api 'org.testcontainers:postgresql:1.21.4'
+    api 'org.testcontainers:junit-jupiter:1.21.4'
+
+    api 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.7.0'
+
+    api 'org.slf4j:slf4j-api'
+    api 'ch.qos.logback:logback-classic'
+    api 'org.springframework.security:spring-security-test'
+    api 'org.springframework.cloud:spring-cloud-starter-contract-verifier:4.3.0'
+
+    api 'com.squareup.okhttp3:mockwebserver:4.12.0'
+    api 'org.springframework.boot:spring-boot-starter-test'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
+    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+jar {
+    enabled = true
+    archiveClassifier = ''
+}
+
+test {
+    useJUnitPlatform()
+    jvmArgs("-XX:+EnableDynamicAgentLoading")
+}

@@ -1,0 +1,135 @@
+plugins {
+    id 'java-library'
+    id 'jacoco'
+    id 'maven-publish'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.springframework.cloud.contract' version '4.1.4'
+}
+
+jacoco {
+    toolVersion = '0.8.11'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'org.springframework.boot:spring-boot-dependencies:3.5.8'
+        mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2025.0.0'
+    }
+}
+
+sourceSets {
+    main {
+        java.srcDir 'src/main/java'
+        resources.srcDir 'src/main/resources'
+    }
+
+    test {
+        java {
+            srcDir 'src/test/java'
+            srcDir "$buildDir/generated-test-sources/contracts"
+        }
+        resources.srcDir 'src/test/resources'
+    }
+
+    cashIntegrationTest {
+        java.srcDir 'src/cashIntegrationTest/java'
+        resources.srcDir 'src/cashIntegrationTest/resources'
+
+        compileClasspath += sourceSets.main.output + configurations.testCompileClasspath
+        runtimeClasspath += output + compileClasspath + configurations.testRuntimeClasspath
+    }
+}
+
+configurations {
+    cashIntegrationTestImplementation.extendsFrom testImplementation
+    cashIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+dependencies {
+    api project(':microservice-chassis')
+
+    api 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    api 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    cashIntegrationTestImplementation 'org.springframework.boot:spring-boot-starter-test'
+    cashIntegrationTestImplementation 'io.projectreactor:reactor-test'
+    cashIntegrationTestImplementation 'org.springframework.security:spring-security-test'
+
+    cashIntegrationTestImplementation 'org.testcontainers:postgresql'
+    cashIntegrationTestImplementation 'org.testcontainers:r2dbc'
+    cashIntegrationTestImplementation 'org.testcontainers:junit-jupiter'
+
+    cashIntegrationTestImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
+    cashIntegrationTestImplementation 'com.squareup.okhttp3:mockwebserver'
+    cashIntegrationTestImplementation 'io.micrometer:micrometer-test'
+    cashIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
+    cashIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-contract-verifier'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs.add('-parameters')
+}
+
+jar {
+    enabled = true
+    archiveClassifier = ''
+}
+
+test {
+    useJUnitPlatform()
+    jvmArgs("-XX:+EnableDynamicAgentLoading")
+}
+
+tasks.register('cashIntegrationTest', Test) {
+    description = 'Runs cash integration tests'
+    group = 'verification'
+
+    testClassesDirs = sourceSets.cashIntegrationTest.output.classesDirs
+    classpath = sourceSets.cashIntegrationTest.runtimeClasspath
+
+    useJUnitPlatform()
+    shouldRunAfter test
+    dependsOn 'generateContractTests'
+}
+
+tasks.named('processCashIntegrationTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('processResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('processCashIntegrationTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('processTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+check.dependsOn cashIntegrationTest
+
+contracts {
+    baseClassForTests = 'io.github.habatoo.controllers.BaseContractTest'
+    testMode = 'WEBTESTCLIENT'
+    contractsDslDir = file("$projectDir/src/test/resources/contracts")
+}
+
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            from components.java
+            artifact tasks.named("verifierStubsJar")
+        }
+    }
+}

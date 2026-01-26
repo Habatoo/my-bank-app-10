@@ -1,3 +1,9 @@
 rootProject.name = 'my-bank-app-9'
 
 include 'microservice-chassis'
+include 'notification'
+include 'transfer'
+include 'cash'
+include 'account'
+include 'gateway'
+include 'front-ui'

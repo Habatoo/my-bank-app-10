@@ -1,0 +1,135 @@
+plugins {
+    id 'java-library'
+    id 'jacoco'
+    id 'maven-publish'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.springframework.cloud.contract' version '4.1.4'
+}
+
+jacoco {
+    toolVersion = '0.8.11'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'org.springframework.boot:spring-boot-dependencies:3.5.8'
+        mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2025.0.0'
+    }
+}
+
+sourceSets {
+    main {
+        java.srcDir 'src/main/java'
+        resources.srcDir 'src/main/resources'
+    }
+
+    test {
+        java {
+            srcDir 'src/test/java'
+            srcDir "$buildDir/generated-test-sources/contracts"
+        }
+        resources.srcDir 'src/test/resources'
+    }
+
+    transferIntegrationTest {
+        java.srcDir 'src/transferIntegrationTest/java'
+        resources.srcDir 'src/transferIntegrationTest/resources'
+
+        compileClasspath += sourceSets.main.output + configurations.testCompileClasspath
+        runtimeClasspath += output + compileClasspath + configurations.testRuntimeClasspath
+    }
+}
+
+configurations {
+    transferIntegrationTestImplementation.extendsFrom testImplementation
+    transferIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+dependencies {
+    api project(':microservice-chassis')
+
+    api 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    api 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    transferIntegrationTestImplementation 'org.springframework.boot:spring-boot-starter-test'
+    transferIntegrationTestImplementation 'io.projectreactor:reactor-test'
+    transferIntegrationTestImplementation 'org.springframework.security:spring-security-test'
+
+    transferIntegrationTestImplementation 'org.testcontainers:postgresql'
+    transferIntegrationTestImplementation 'org.testcontainers:r2dbc'
+    transferIntegrationTestImplementation 'org.testcontainers:junit-jupiter'
+
+    transferIntegrationTestImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
+    transferIntegrationTestImplementation 'com.squareup.okhttp3:mockwebserver'
+    transferIntegrationTestImplementation 'io.micrometer:micrometer-test'
+    transferIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
+    transferIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-contract-verifier'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs.add('-parameters')
+}
+
+jar {
+    enabled = true
+    archiveClassifier = ''
+}
+
+test {
+    useJUnitPlatform()
+    jvmArgs("-XX:+EnableDynamicAgentLoading")
+}
+
+tasks.register('transferIntegrationTest', Test) {
+    description = 'Runs transfer integration tests'
+    group = 'verification'
+
+    testClassesDirs = sourceSets.transferIntegrationTest.output.classesDirs
+    classpath = sourceSets.transferIntegrationTest.runtimeClasspath
+
+    useJUnitPlatform()
+    shouldRunAfter test
+    dependsOn 'generateContractTests'
+}
+
+tasks.named('processTransferIntegrationTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('processResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('processTransferIntegrationTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('processTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+check.dependsOn transferIntegrationTest
+
+contracts {
+    baseClassForTests = 'io.github.habatoo.controllers.BaseContractTest'
+    testMode = 'WEBTESTCLIENT'
+    contractsDslDir = file("$projectDir/src/test/resources/contracts")
+}
+
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            from components.java
+            artifact tasks.named("verifierStubsJar")
+        }
+    }
+}
