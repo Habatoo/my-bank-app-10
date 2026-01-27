@@ -5,7 +5,7 @@
 ![Docker](https://img.shields.io/badge/Docker-compose-blue?logo=docker)
 
 ## О проекте
-my-bank-app-9 — это микросервисное банковское приложение с реактивным стеком. 
+my-bank-app-10 — это микросервисное банковское приложение с реактивным стеком. 
 Система позволяет пользователям управлять профилем, балансом и совершать межбанковские переводы в безопасной среде.
 
 Основные возможности:
@@ -81,8 +81,8 @@ my-bank-app/
    <br>Убедитесь, что у вас установлены Docker и Docker Buildx. 
    <br>Настройте параметры в файле ./env/.env.
 ```bash
-   git clone -b feature/module_two_sprint_eight_branch https://github.com/Habatoo/my-bank-app-9.git
-   cd my-bank-app-9
+   git clone -b feature/module_two_sprint_eight_branch https://github.com/Habatoo/my-bank-app-10.git
+   cd my-bank-app-10
 ```
 
 2. Сборка и запуск
