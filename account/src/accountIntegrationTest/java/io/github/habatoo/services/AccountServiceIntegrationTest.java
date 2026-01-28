@@ -2,6 +2,7 @@ package io.github.habatoo.services;
 
 import io.github.habatoo.BaseAccountTest;
 import io.github.habatoo.dto.NotificationEvent;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.models.User;
 import io.github.habatoo.services.impl.AccountServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,12 +38,13 @@ class AccountServiceIntegrationTest extends BaseAccountTest {
     void getByLoginShouldReturnFullResponseDtoTest() {
         String login = "tester";
         User user = createUser(login);
+        String currency = "RUB";
 
         var setup = clearDatabase()
                 .then(userRepository.save(user))
                 .flatMap(u -> accountRepository.save(createAccount(u.getId(), "100.00")));
 
-        StepVerifier.create(setup.then(accountService.getByLogin(login)))
+        StepVerifier.create(setup.then(accountService.getByLogin(login, currency)))
                 .assertNext(dto -> {
                     assertThat(dto.getLogin()).isEqualTo(login);
                     assertThat(dto.getBalance()).isEqualByComparingTo("100.00");
@@ -61,12 +63,13 @@ class AccountServiceIntegrationTest extends BaseAccountTest {
         String login = "deposit_user";
         BigDecimal initialBalance = new BigDecimal("100.00");
         BigDecimal delta = new BigDecimal("50.50");
+        String currency = "RUB";
 
         var setup = clearDatabase()
                 .then(userRepository.save(createUser(login)))
                 .flatMap(u -> accountRepository.save(createAccount(u.getId(), initialBalance)));
 
-        var action = setup.then(accountService.changeBalance(login, delta));
+        var action = setup.then(accountService.changeBalance(login, delta, currency));
 
         StepVerifier.create(action)
                 .assertNext(result -> {
@@ -76,7 +79,7 @@ class AccountServiceIntegrationTest extends BaseAccountTest {
                 .verifyComplete();
 
         StepVerifier.create(userRepository.findByLogin(login)
-                        .flatMap(u -> accountRepository.findByUserId(u.getId())))
+                        .flatMap(u -> accountRepository.findByUserIdAndCurrency(u.getId(), Currency.valueOf(currency))))
                 .assertNext(acc -> assertThat(acc.getBalance()).isEqualByComparingTo("150.50"))
                 .verifyComplete();
     }
@@ -90,12 +93,13 @@ class AccountServiceIntegrationTest extends BaseAccountTest {
     void changeBalanceWithdrawShouldFailIfInsufficientTest() {
         String login = "poor_user";
         User user = createUser(login);
+        String currency = "RUB";
 
         var setup = clearDatabase()
                 .then(userRepository.save(user))
                 .flatMap(u -> accountRepository.save(createAccount(u.getId(), "10.00")));
 
-        var action = setup.then(accountService.changeBalance(login, new BigDecimal("-20.00")));
+        var action = setup.then(accountService.changeBalance(login, new BigDecimal("-20.00"), currency));
 
         StepVerifier.create(action)
                 .assertNext(result -> {

@@ -1,6 +1,7 @@
 package io.github.habatoo.services;
 
 import io.github.habatoo.dto.AccountFullResponseDto;
+import io.github.habatoo.dto.PasswordUpdateDto;
 import io.github.habatoo.dto.UserUpdateDto;
 import org.springframework.security.oauth2.jwt.Jwt;
 import reactor.core.publisher.Mono;
@@ -38,4 +39,14 @@ public interface UserService {
      * @return {@link Mono} с актуальным состоянием профиля после обновления.
      */
     Mono<AccountFullResponseDto> updateProfile(String login, UserUpdateDto dto);
+
+
+    /**
+     * Обновляет пароль пользователя.
+     *
+     * @param login уникальный логин пользователя, чей профиль необходимо обновить.
+     * @param dto   объект {@link PasswordUpdateDto} с новыми значением пароля.
+     * @return {@link Mono} с актуальным состоянием пароля после обновления.
+     */
+    Mono<Boolean> updatePassword(String login, PasswordUpdateDto dto);
 }

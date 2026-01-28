@@ -1,5 +1,6 @@
 package io.github.habatoo.repositories;
 
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.models.Account;
 import org.springframework.data.r2dbc.repository.R2dbcRepository;
 import reactor.core.publisher.Mono;
@@ -24,7 +25,8 @@ public interface AccountRepository extends R2dbcRepository<Account, UUID> {
      * </p>
      *
      * @param userId уникальный идентификатор пользователя (UUID).
+     * @param currency валюта счета.
      * @return {@link Mono}, содержащий найденный аккаунт, либо пустой Mono, если счет не найден.
      */
-    Mono<Account> findByUserId(UUID userId);
+    Mono<Account> findByUserIdAndCurrency(UUID userId, Currency currency);
 }

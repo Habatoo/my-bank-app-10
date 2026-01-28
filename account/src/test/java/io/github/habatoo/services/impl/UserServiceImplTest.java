@@ -2,6 +2,7 @@ package io.github.habatoo.services.impl;
 
 import io.github.habatoo.dto.AccountFullResponseDto;
 import io.github.habatoo.dto.UserUpdateDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.models.Account;
 import io.github.habatoo.models.User;
 import io.github.habatoo.repositories.AccountRepository;
@@ -70,7 +71,7 @@ class UserServiceImplTest {
                 .build();
 
         when(userRepository.findByLogin(LOGIN)).thenReturn(Mono.just(existingUser));
-        when(accountRepository.findByUserId(USER_ID)).thenReturn(Mono.just(existingAccount));
+        when(accountRepository.findByUserIdAndCurrency(USER_ID, Currency.RUB)).thenReturn(Mono.just(existingAccount));
 
         Mono<AccountFullResponseDto> result = userService.getOrCreateUser(jwt);
 
@@ -127,7 +128,7 @@ class UserServiceImplTest {
 
         when(userRepository.findByLogin(LOGIN)).thenReturn(Mono.just(user));
         when(userRepository.save(any(User.class))).thenAnswer(i -> Mono.just(i.getArgument(0)));
-        when(accountRepository.findByUserId(USER_ID)).thenReturn(Mono.just(account));
+        when(accountRepository.findByUserIdAndCurrency(USER_ID, Currency.RUB)).thenReturn(Mono.just(account));
         when(outboxClientService.saveEvent(any())).thenReturn(Mono.empty());
 
         Mono<AccountFullResponseDto> result = userService.updateProfile(LOGIN, updateDto);

@@ -11,10 +11,12 @@ CREATE TABLE IF NOT EXISTS account (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
     balance DECIMAL(19, 4) DEFAULT 0.0000,
+    currency VARCHAR(20) DEFAULT 'RUB',
     version BIGINT DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 
+    UNIQUE (user_id, currency),
     CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -37,6 +39,7 @@ COMMENT ON TABLE account IS 'Таблица финансовых счетов п
 COMMENT ON COLUMN account.id IS 'Технический идентификатор счета (PK)';
 COMMENT ON COLUMN account.user_id IS 'Внешний ключ (FK) для связи со справочником пользователей';
 COMMENT ON COLUMN account.balance IS 'Текущий остаток денежных средств. Точность 4 знака после запятой для избежания ошибок округления';
+COMMENT ON COLUMN account.currency IS 'Валюта счета';
 COMMENT ON COLUMN account.version IS 'Счетчик версий для механизма Optimistic Locking (защита от Double Spend)';
 COMMENT ON COLUMN account.created_at IS 'Метка времени открытия счета';
 COMMENT ON COLUMN account.updated_at IS 'Метка времени последней финансовой операции по счету или изменения метаданных';

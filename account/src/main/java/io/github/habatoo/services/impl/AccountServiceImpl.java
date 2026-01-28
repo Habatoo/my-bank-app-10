@@ -4,6 +4,7 @@ import io.github.habatoo.dto.AccountFullResponseDto;
 import io.github.habatoo.dto.AccountShortDto;
 import io.github.habatoo.dto.NotificationEvent;
 import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.dto.enums.EventStatus;
 import io.github.habatoo.dto.enums.EventType;
 import io.github.habatoo.models.Account;
@@ -37,14 +38,15 @@ public class AccountServiceImpl implements AccountService {
      * {@inheritDoc}
      */
     @Override
-    public Mono<AccountFullResponseDto> getByLogin(String login) {
+    public Mono<AccountFullResponseDto> getByLogin(String login, String currency) {
         return userRepository.findByLogin(login)
-                .flatMap(user -> accountRepository.findByUserId(user.getId())
+                .flatMap(user -> accountRepository.findByUserIdAndCurrency(user.getId(), Currency.valueOf(currency))
                         .map(acc -> AccountFullResponseDto.builder()
                                 .login(user.getLogin())
                                 .name(user.getName())
                                 .birthDate(user.getBirthDate())
                                 .balance(acc.getBalance())
+                                .currency(acc.getCurrency())
                                 .build()));
     }
 
@@ -54,7 +56,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public Flux<AccountShortDto> getOtherAccounts(String currentLogin) {
         return userRepository.findAllByLoginNot(currentLogin)
-                .map(u -> new AccountShortDto(u.getLogin(), u.getName()));
+                .map(u -> new AccountShortDto(u.getLogin(), u.getName(), Currency.RUB)); //TODO
     }
 
     /**
@@ -62,9 +64,9 @@ public class AccountServiceImpl implements AccountService {
      */
     @Override
     @Transactional
-    public Mono<OperationResultDto<Void>> changeBalance(String login, BigDecimal delta) {
+    public Mono<OperationResultDto<Void>> changeBalance(String login, BigDecimal delta, String currency) {
         return userRepository.findByLogin(login)
-                .flatMap(user -> accountRepository.findByUserId(user.getId()))
+                .flatMap(user -> accountRepository.findByUserIdAndCurrency(user.getId(), Currency.valueOf(currency)))
                 .flatMap(account -> processBalanceChange(account, login, delta))
                 .switchIfEmpty(Mono.just(createErrorResponse("ACCOUNT_NOT_FOUND", "Счет не найден")));
     }

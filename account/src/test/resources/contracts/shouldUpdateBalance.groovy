@@ -10,6 +10,7 @@ Contract.make {
             queryParameters {
                 parameter 'login': 'user1'
                 parameter 'amount': '100.00'
+                parameter 'currency': 'RUB'
             }
         }
         headers {

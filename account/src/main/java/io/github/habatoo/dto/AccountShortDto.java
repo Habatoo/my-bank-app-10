@@ -1,5 +1,6 @@
 package io.github.habatoo.dto;
 
+import io.github.habatoo.dto.enums.Currency;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,4 +31,9 @@ public class AccountShortDto {
      * Предназначено для удобного поиска и выбора получателя человеком.
      */
     private String name;
+
+    /**
+     * Валюта счета.
+     */
+    private Currency currency;
 }

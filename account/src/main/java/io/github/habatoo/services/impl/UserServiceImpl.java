@@ -2,7 +2,9 @@ package io.github.habatoo.services.impl;
 
 import io.github.habatoo.dto.AccountFullResponseDto;
 import io.github.habatoo.dto.NotificationEvent;
+import io.github.habatoo.dto.PasswordUpdateDto;
 import io.github.habatoo.dto.UserUpdateDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.dto.enums.EventStatus;
 import io.github.habatoo.dto.enums.EventType;
 import io.github.habatoo.models.Account;
@@ -43,7 +45,7 @@ public class UserServiceImpl implements UserService {
         String login = jwt.getClaimAsString("preferred_username");
 
         return userRepository.findByLogin(login)
-                .flatMap(user -> accountRepository.findByUserId(user.getId())
+                .flatMap(user -> accountRepository.findByUserIdAndCurrency(user.getId(), Currency.RUB) // TODO
                         .map(acc -> mapToFullDto(user, acc))
                 )
                 .switchIfEmpty(Mono.defer(() -> registerFromToken(jwt)));
@@ -60,9 +62,17 @@ public class UserServiceImpl implements UserService {
                     updateUserFields(user, dto);
                     return userRepository.save(user);
                 })
-                .flatMap(user -> accountRepository.findByUserId(user.getId())
+                .flatMap(user -> accountRepository.findByUserIdAndCurrency(user.getId(), Currency.RUB)
                         .flatMap(acc -> saveUpdateNotification(login, dto)
                                 .thenReturn(mapToFullDto(user, acc))));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Mono<Boolean> updatePassword(String login, PasswordUpdateDto dto) {
+        return Mono.just(true); //TODO
     }
 
     /**

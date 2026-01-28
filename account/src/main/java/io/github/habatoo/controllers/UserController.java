@@ -1,6 +1,7 @@
 package io.github.habatoo.controllers;
 
 import io.github.habatoo.dto.AccountFullResponseDto;
+import io.github.habatoo.dto.PasswordUpdateDto;
 import io.github.habatoo.dto.UserUpdateDto;
 import io.github.habatoo.services.UserService;
 import lombok.RequiredArgsConstructor;
@@ -64,5 +65,25 @@ public class UserController {
         String username = jwt.getClaimAsString("preferred_username");
         log.info("Запрос на обновление профиля пользователем: {}", username);
         return userService.updateProfile(username, dto);
+    }
+
+    /**
+     * Обновление пароля текущего пользователя.
+     * <p>
+     * Позволяет изменить отдельные пароль
+     * на основе переданного объекта {@link PasswordUpdateDto}.
+     * </p>
+     *
+     * @param jwt объект авторизованного пользователя для идентификации.
+     * @param dto объект с обновленными данными пользователя.
+     * @return {@link Mono} с результатом обновления.
+     */
+    @PatchMapping("/password")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN') or hasRole('ACCOUNT_ACCESS')")
+    public Mono<Boolean> updatePassword(@AuthenticationPrincipal Jwt jwt,
+                                        @RequestBody PasswordUpdateDto dto) {
+        String username = jwt.getClaimAsString("preferred_username");
+        log.info("Запрос на обновление пароля пользователем: {}", username);
+        return userService.updatePassword(username, dto);
     }
 }

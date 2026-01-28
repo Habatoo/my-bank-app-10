@@ -1,5 +1,6 @@
 package io.github.habatoo.models;
 
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.dto.enums.OperationType;
 import lombok.*;
 import org.springframework.data.annotation.Id;
@@ -46,6 +47,19 @@ public class Cash {
      * Всегда хранится в виде абсолютного положительного значения.
      */
     private BigDecimal amount;
+
+    /**
+     * Валюта операции.
+     * Используется {@link Currency} для обозначения вида валюты.
+     */
+    private Currency currency;
+
+    /**
+     * Идентификатор счета, которому принадлежит данная операция.
+     * Соответствует колонке {@code account_id} в базе данных.
+     */
+    @Column("account_id")
+    private UUID accountId;
 
     /**
      * Тип финансовой операции.

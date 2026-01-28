@@ -54,17 +54,19 @@ public class AccountController {
      * Используется администраторами или техническими сервисами для прямой корректировки средств.
      * </p>
      *
-     * @param login  логин пользователя, которому необходимо изменить баланс.
-     * @param amount сумма изменения (положительная для начисления, отрицательная для списания).
+     * @param login    логин пользователя, которому необходимо изменить баланс.
+     * @param amount   сумма изменения (положительная для начисления, отрицательная для списания).
+     * @param currency валюта счета.
      * @return результат операции {@link OperationResultDto} в виде реактивного объекта {@link Mono}.
      */
     @PostMapping("/balance")
     @PreAuthorize("hasRole('ADMIN') or hasRole('ACCOUNT_ACCESS')")
     public Mono<OperationResultDto<Void>> updateBalanceInternal(
             @RequestParam String login,
-            @RequestParam BigDecimal amount) {
+            @RequestParam BigDecimal amount,
+            @RequestParam String currency) {
 
         log.info("Запрос на изменение баланса для пользователя {}: {}", login, amount);
-        return accountService.changeBalance(login, amount);
+        return accountService.changeBalance(login, amount, currency);
     }
 }

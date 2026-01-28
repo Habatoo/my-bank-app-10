@@ -2,6 +2,7 @@ package io.github.habatoo;
 
 import io.github.habatoo.base.BaseTest;
 import io.github.habatoo.dto.UserUpdateDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.models.Account;
 import io.github.habatoo.models.User;
 import io.github.habatoo.repositories.AccountRepository;
@@ -89,6 +90,7 @@ public abstract class BaseAccountTest extends BaseTest {
         return Account.builder()
                 .userId(userId)
                 .balance(new BigDecimal(balance.toString()))
+                .currency(Currency.RUB)
                 .build();
     }
 }

@@ -2,10 +2,8 @@ package io.github.habatoo.controllers;
 
 import io.github.habatoo.AccountApplication;
 import io.github.habatoo.configurations.TestSecurityConfiguration;
-import io.github.habatoo.dto.AccountFullResponseDto;
-import io.github.habatoo.dto.AccountShortDto;
-import io.github.habatoo.dto.OperationResultDto;
-import io.github.habatoo.dto.UserUpdateDto;
+import io.github.habatoo.dto.*;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.services.AccountService;
 import io.github.habatoo.services.UserService;
 import io.restassured.module.webtestclient.RestAssuredWebTestClient;
@@ -62,6 +60,7 @@ public abstract class BaseContractTest {
                 LocalDate.parse("1990-01-01"),
                 UUID.randomUUID(),
                 new BigDecimal("500.00"),
+                Currency.RUB,
                 1L);
         AccountFullResponseDto mockAccountFullUpdate = new AccountFullResponseDto(
                 "user1",
@@ -69,15 +68,16 @@ public abstract class BaseContractTest {
                 LocalDate.parse("1990-01-01"),
                 UUID.randomUUID(),
                 new BigDecimal("500.00"),
+                Currency.RUB,
                 1L);
-        AccountShortDto mockAccountShortDto1 = new AccountShortDto("user1", "User One");
-        AccountShortDto mockAccountShortDto2 = new AccountShortDto("user2", "User Two");
+        AccountShortDto mockAccountShortDto1 = new AccountShortDto("user1", "User One", Currency.RUB);
+        AccountShortDto mockAccountShortDto2 = new AccountShortDto("user2", "User Two", Currency.RUB);
         OperationResultDto<Void> successResponse = OperationResultDto.<Void>builder()
                 .success(true)
                 .message("Баланс обновлен")
                 .build();
 
-        when(accountService.changeBalance(anyString(), any(BigDecimal.class)))
+        when(accountService.changeBalance(anyString(), any(BigDecimal.class), anyString()))
                 .thenReturn(Mono.just(successResponse));
         when(accountService.getOtherAccounts(anyString()))
                 .thenReturn(Flux.just(mockAccountShortDto1, mockAccountShortDto2));
@@ -86,6 +86,8 @@ public abstract class BaseContractTest {
                 .thenReturn(Mono.just(mockAccountFull));
         when(userService.updateProfile(anyString(), any(UserUpdateDto.class)))
                 .thenReturn(Mono.just(mockAccountFullUpdate));
+        when(userService.updatePassword(anyString(), any(PasswordUpdateDto.class)))
+                .thenReturn(Mono.just(true));
 
         Jwt jwt = Jwt.withTokenValue("dummy-token")
                 .header("alg", "none")

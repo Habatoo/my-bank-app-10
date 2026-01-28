@@ -3,6 +3,7 @@ package io.github.habatoo.services.impl;
 import io.github.habatoo.dto.AccountFullResponseDto;
 import io.github.habatoo.dto.AccountShortDto;
 import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.models.Account;
 import io.github.habatoo.models.User;
 import io.github.habatoo.repositories.AccountRepository;
@@ -51,14 +52,15 @@ class AccountServiceImplTest {
     @DisplayName("Получение данных по логину: успех")
     void getByLoginSuccessTest() {
         String login = "test_user";
+        String currency = "RUB";
         UUID userId = UUID.randomUUID();
         User user = User.builder().id(userId).login(login).name("Ivan").build();
         Account account = Account.builder().userId(userId).balance(BigDecimal.valueOf(100)).build();
 
         when(userRepository.findByLogin(login)).thenReturn(Mono.just(user));
-        when(accountRepository.findByUserId(userId)).thenReturn(Mono.just(account));
+        when(accountRepository.findByUserIdAndCurrency(userId, Currency.RUB)).thenReturn(Mono.just(account));
 
-        Mono<AccountFullResponseDto> result = accountService.getByLogin(login);
+        Mono<AccountFullResponseDto> result = accountService.getByLogin(login, currency);
 
         StepVerifier.create(result)
                 .expectNextMatches(dto -> dto.getLogin().equals(login)
@@ -91,17 +93,18 @@ class AccountServiceImplTest {
     @DisplayName("Изменение баланса: успешное пополнение")
     void changeBalanceDepositSuccessTest() {
         String login = "user";
+        String currency = "RUB";
         UUID userId = UUID.randomUUID();
         BigDecimal delta = BigDecimal.valueOf(50);
         User user = User.builder().id(userId).login(login).build();
         Account account = Account.builder().userId(userId).balance(BigDecimal.valueOf(100)).build();
 
         when(userRepository.findByLogin(login)).thenReturn(Mono.just(user));
-        when(accountRepository.findByUserId(userId)).thenReturn(Mono.just(account));
+        when(accountRepository.findByUserIdAndCurrency(userId, Currency.RUB)).thenReturn(Mono.just(account));
         when(accountRepository.save(any(Account.class))).thenReturn(Mono.just(account));
         when(outboxClientService.saveEvent(any())).thenReturn(Mono.empty());
 
-        Mono<OperationResultDto<Void>> result = accountService.changeBalance(login, delta);
+        Mono<OperationResultDto<Void>> result = accountService.changeBalance(login, delta, currency);
 
         StepVerifier.create(result)
                 .expectNextMatches(OperationResultDto::isSuccess)
@@ -118,15 +121,16 @@ class AccountServiceImplTest {
     @DisplayName("Изменение баланса: ошибка при недостаточном балансе")
     void changeBalanceInsufficientFundsTest() {
         String login = "user";
+        String currency = "RUB";
         UUID userId = UUID.randomUUID();
         BigDecimal withdrawDelta = BigDecimal.valueOf(-200);
         User user = User.builder().id(userId).login(login).build();
         Account account = Account.builder().userId(userId).balance(BigDecimal.valueOf(100)).build();
 
         when(userRepository.findByLogin(login)).thenReturn(Mono.just(user));
-        when(accountRepository.findByUserId(userId)).thenReturn(Mono.just(account));
+        when(accountRepository.findByUserIdAndCurrency(userId, Currency.RUB)).thenReturn(Mono.just(account));
 
-        Mono<OperationResultDto<Void>> result = accountService.changeBalance(login, withdrawDelta);
+        Mono<OperationResultDto<Void>> result = accountService.changeBalance(login, withdrawDelta, currency);
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> !res.isSuccess()
@@ -143,9 +147,10 @@ class AccountServiceImplTest {
     @DisplayName("Изменение баланса: ошибка, если счет не найден")
     void changeBalanceAccountNotFoundTest() {
         String login = "unknown";
+        String currency = "RUB";
         when(userRepository.findByLogin(login)).thenReturn(Mono.empty());
 
-        Mono<OperationResultDto<Void>> result = accountService.changeBalance(login, BigDecimal.ONE);
+        Mono<OperationResultDto<Void>> result = accountService.changeBalance(login, BigDecimal.ONE, currency);
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> !res.isSuccess()

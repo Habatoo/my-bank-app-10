@@ -24,9 +24,10 @@ public interface AccountService {
      * </p>
      *
      * @param login уникальный логин пользователя.
+     * @param currency текущая валюты.
      * @return {@link Mono}, содержащий детальную информацию об аккаунте {@link AccountFullResponseDto}.
      */
-    Mono<AccountFullResponseDto> getByLogin(String login);
+    Mono<AccountFullResponseDto> getByLogin(String login, String currency);
 
     /**
      * Получает список кратких данных всех аккаунтов, за исключением текущего.
@@ -48,10 +49,11 @@ public interface AccountService {
      * атомарность и проверку достаточности средств при списании.
      * </p>
      *
-     * @param login логин пользователя, чей счет подлежит изменению.
-     * @param delta сумма изменения баланса.
+     * @param login    логин пользователя, чей счет подлежит изменению.
+     * @param delta    сумма изменения баланса.
+     * @param currency валюта.
      * @return {@link Mono} с результатом операции {@link OperationResultDto},
      * содержащим статус успеха и информационное сообщение.
      */
-    Mono<OperationResultDto<Void>> changeBalance(String login, BigDecimal delta);
+    Mono<OperationResultDto<Void>> changeBalance(String login, BigDecimal delta, String currency);
 }

@@ -1,5 +1,6 @@
 package io.github.habatoo.models;
 
+import io.github.habatoo.dto.enums.Currency;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Version;
@@ -44,6 +45,12 @@ public class Account {
      * Используется {@link BigDecimal} для обеспечения высокой точности финансовых операций.
      */
     private BigDecimal balance;
+
+    /**
+     * Валюта счета.
+     * Используется {@link Currency} для обозначения вида валюты.
+     */
+    private Currency currency;
 
     /**
      * Поле для реализации оптимистической блокировки (Optimistic Locking).

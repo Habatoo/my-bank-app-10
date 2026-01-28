@@ -3,6 +3,7 @@ package io.github.habatoo.controllers;
 import io.github.habatoo.configurations.SecurityChassisAutoConfiguration;
 import io.github.habatoo.dto.AccountShortDto;
 import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.services.AccountService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -62,7 +63,7 @@ class AccountControllerCashedTest {
     @DisplayName("GET /users - Успех при получении списка других пользователей")
     void getListSuccess() {
         String currentUser = "current_authorized_user";
-        AccountShortDto otherUser = new AccountShortDto("other_user", "Иван Иванов");
+        AccountShortDto otherUser = new AccountShortDto("other_user", "Иван Иванов", Currency.RUB);
 
         when(accountService.getOtherAccounts(currentUser)).thenReturn(Flux.just(otherUser));
 
@@ -88,13 +89,14 @@ class AccountControllerCashedTest {
     void updateBalanceInternalSuccess() {
         String targetLogin = "target_user";
         BigDecimal amount = new BigDecimal("500.00");
+        String currency = "RUB";
 
         OperationResultDto<Void> successResponse = OperationResultDto.<Void>builder()
                 .success(true)
                 .message("Баланс обновлен")
                 .build();
 
-        when(accountService.changeBalance(eq(targetLogin), eq(amount)))
+        when(accountService.changeBalance(eq(targetLogin), eq(amount), eq(currency)))
                 .thenReturn(Mono.just(successResponse));
 
         webTestClient
@@ -106,6 +108,7 @@ class AccountControllerCashedTest {
                         .path("/balance")
                         .queryParam("login", targetLogin)
                         .queryParam("amount", amount)
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isOk()
@@ -129,6 +132,7 @@ class AccountControllerCashedTest {
                         .path("/balance")
                         .queryParam("login", "any")
                         .queryParam("amount", 100)
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isForbidden();
