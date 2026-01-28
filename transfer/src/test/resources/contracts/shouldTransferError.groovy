@@ -7,15 +7,16 @@ Contract.make {
 
     request {
         method 'POST'
-        urlPath '/transfer'
+        urlPath('/transfer') {
+            queryParameters {
+                parameter 'value', '1000.00'
+                parameter 'account', 'targetUser'
+            }
+        }
         headers {
-            contentType('application/x-www-form-urlencoded')
+            contentType(applicationJson())
             header('Authorization', 'Bearer dummy-token')
         }
-        body([
-                value  : 1000.0,
-                account: 'targetUser'
-        ])
     }
 
     response {

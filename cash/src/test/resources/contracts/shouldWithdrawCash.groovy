@@ -7,15 +7,15 @@ Contract.make {
 
     request {
         method 'POST'
-        urlPath('/cash')
+        urlPath('/cash') {
+            queryParameters {
+                parameter 'value', '50.00'
+                parameter 'action', 'GET'
+            }
+        }
         headers {
             header('Authorization', 'Bearer dummy-token')
-            header('Content-Type', 'application/x-www-form-urlencoded')
         }
-        body(
-                value: "50.00",
-                action: "GET"
-        )
     }
 
     response {

@@ -1,57 +1,70 @@
 package io.github.habatoo.controllers;
 
+import io.github.habatoo.NotificationApplication;
+import io.github.habatoo.configurations.TestSecurityConfiguration;
+import io.github.habatoo.dto.NotificationEvent;
+import io.github.habatoo.services.NotificationService;
+import io.restassured.module.webtestclient.RestAssuredWebTestClient;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cloud.contract.verifier.messaging.boot.AutoConfigureMessageVerifier;
 import org.springframework.context.ApplicationContext;
-import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.web.reactive.function.client.ExchangeStrategies;
+import reactor.core.publisher.Mono;
 
-import java.util.Base64;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.springSecurity;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Slf4j
 @ActiveProfiles("test")
-@AutoConfigureMessageVerifier
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        classes = {
+                NotificationApplication.class,
+                TestSecurityConfiguration.class
+        }
+)
 public abstract class BaseContractTest {
 
     @Autowired
-    protected ApplicationContext applicationContext;
+    protected ApplicationContext context;
 
     protected WebTestClient webTestClient;
 
-    protected String bearerToken;
+    @MockitoBean
+    private NotificationService notificationService;
 
     @BeforeEach
-    public void setUp() {
-        this.webTestClient = WebTestClient.bindToApplicationContext(applicationContext)
+    void setup() {
+        when(notificationService.processEvent(any(NotificationEvent.class)))
+                .thenAnswer(invocation -> {
+                    NotificationEvent event = invocation.getArgument(0);
+
+                    if ("WITHDRAW".equals(event.getEventType()) && "FAILURE".equals(event.getStatus())) {
+                        return Mono.error(new RuntimeException("Недостаточно средств"));
+                    }
+
+                    if ("UNKNOWN".equals(event.getEventType()) || (event.getUsername() != null && event.getUsername().isEmpty())) {
+                        throw new IllegalArgumentException("Некорректные входные данные");
+                    }
+
+                    return Mono.empty();
+                });
+
+        webTestClient = WebTestClient
+                .bindToApplicationContext(context)
+                .apply(springSecurity())
                 .configureClient()
-                .exchangeStrategies(ExchangeStrategies.builder()
-                        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(16 * 1024 * 1024))
-                        .build())
-                .build();
+                .build()
+                .mutateWith(mockJwt()
+                        .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))
+                );
 
-        this.bearerToken = generateTestJwt();
-    }
-
-
-    /**
-     * Добавление заголовков авторизации к запросам
-     */
-    protected WebTestClient.RequestHeadersSpec<?> withAuth(WebTestClient.RequestHeadersSpec<?> request) {
-        return request.header(HttpHeaders.AUTHORIZATION, "Bearer " + bearerToken);
-    }
-
-    /**
-     * Генерация мок JWT для контрактных тестов.
-     * В реальном проекте можно использовать библиотеку JWT или статический токен.
-     */
-    private String generateTestJwt() {
-        String header = Base64.getUrlEncoder().encodeToString("{\"alg\":\"none\"}".getBytes());
-        String payload = Base64.getUrlEncoder().encodeToString("{\"sub\":\"test-user\"}".getBytes());
-        String signature = "";
-        return header + "." + payload + "." + signature;
+        RestAssuredWebTestClient.webTestClient(webTestClient);
     }
 }

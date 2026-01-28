@@ -27,9 +27,8 @@ Contract.make {
         headers {
             contentType(applicationJson())
         }
-        body(
-                success: false,
-                message: "Ошибка при обработке уведомления: Недостаточно средств"
-        )
+        body([
+                message: "Уведомление принято в обработку"
+        ])
     }
 }

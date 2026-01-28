@@ -7,24 +7,25 @@ Contract.make {
 
     request {
         method 'POST'
-        url '/cash'
+        urlPath('/cash') {
+            queryParameters {
+                parameter 'value', '100.00'
+                parameter 'action', 'INVALID_ACTION'
+            }
+        }
         headers {
             header('Authorization', 'Bearer dummy-token')
         }
-        body(
-                value: 100.00,
-                action: "INVALID_ACTION"
-        )
     }
 
     response {
         status 400
-        body([
-                success: false,
-                message: "Invalid operation type"
-        ])
         headers {
             contentType(applicationJson())
         }
+        body([
+                code: "VALIDATION_ERROR",
+                message: "No enum constant io.github.habatoo.dto.enums.OperationType.INVALID_ACTION"
+        ])
     }
 }

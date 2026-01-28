@@ -11,7 +11,7 @@ Contract.make {
     }
 
     response {
-        status 302
+        status 303
         headers {
             header('Location', '/main')
         }

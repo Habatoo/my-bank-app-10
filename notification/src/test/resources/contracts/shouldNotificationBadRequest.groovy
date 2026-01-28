@@ -24,9 +24,9 @@ Contract.make {
         headers {
             contentType(applicationJson())
         }
-        body(
-                success: false,
+        body([
+                code: "VALIDATION_ERROR",
                 message: "Некорректные входные данные"
-        )
+        ])
     }
 }

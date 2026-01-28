@@ -1,57 +1,105 @@
 package io.github.habatoo.controllers;
 
+import io.github.habatoo.AccountApplication;
+import io.github.habatoo.configurations.TestSecurityConfiguration;
+import io.github.habatoo.dto.AccountFullResponseDto;
+import io.github.habatoo.dto.AccountShortDto;
+import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.UserUpdateDto;
+import io.github.habatoo.services.AccountService;
+import io.github.habatoo.services.UserService;
+import io.restassured.module.webtestclient.RestAssuredWebTestClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.contract.verifier.messaging.boot.AutoConfigureMessageVerifier;
 import org.springframework.context.ApplicationContext;
-import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.web.reactive.function.client.ExchangeStrategies;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import java.util.Base64;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.springSecurity;
+
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        classes = {
+                AccountApplication.class,
+                TestSecurityConfiguration.class
+        }
+)
 @ActiveProfiles("test")
 @AutoConfigureMessageVerifier
 public abstract class BaseContractTest {
 
+    @MockitoBean
+    private AccountService accountService;
+
+    @MockitoBean
+    private UserService userService;
+
     @Autowired
-    protected ApplicationContext applicationContext;
+    ApplicationContext context;
 
     protected WebTestClient webTestClient;
 
-    protected String bearerToken;
-
     @BeforeEach
-    public void setUp() {
-        this.webTestClient = WebTestClient.bindToApplicationContext(applicationContext)
-                .configureClient()
-                .exchangeStrategies(ExchangeStrategies.builder()
-                        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(16 * 1024 * 1024))
-                        .build())
+    void setup() {
+        AccountFullResponseDto mockAccountFull = new AccountFullResponseDto(
+                "user1",
+                "User One",
+                LocalDate.parse("1990-01-01"),
+                UUID.randomUUID(),
+                new BigDecimal("500.00"),
+                1L);
+        AccountFullResponseDto mockAccountFullUpdate = new AccountFullResponseDto(
+                "user1",
+                "Updated User",
+                LocalDate.parse("1990-01-01"),
+                UUID.randomUUID(),
+                new BigDecimal("500.00"),
+                1L);
+        AccountShortDto mockAccountShortDto1 = new AccountShortDto("user1", "User One");
+        AccountShortDto mockAccountShortDto2 = new AccountShortDto("user2", "User Two");
+        OperationResultDto<Void> successResponse = OperationResultDto.<Void>builder()
+                .success(true)
+                .message("Баланс обновлен")
                 .build();
 
-        this.bearerToken = generateTestJwt();
-    }
+        when(accountService.changeBalance(anyString(), any(BigDecimal.class)))
+                .thenReturn(Mono.just(successResponse));
+        when(accountService.getOtherAccounts(anyString()))
+                .thenReturn(Flux.just(mockAccountShortDto1, mockAccountShortDto2));
 
+        when(userService.getOrCreateUser(any(Jwt.class)))
+                .thenReturn(Mono.just(mockAccountFull));
+        when(userService.updateProfile(anyString(), any(UserUpdateDto.class)))
+                .thenReturn(Mono.just(mockAccountFullUpdate));
 
-    /**
-     * Добавление заголовков авторизации к запросам
-     */
-    protected WebTestClient.RequestHeadersSpec<?> withAuth(WebTestClient.RequestHeadersSpec<?> request) {
-        return request.header(HttpHeaders.AUTHORIZATION, "Bearer " + bearerToken);
-    }
+        Jwt jwt = Jwt.withTokenValue("dummy-token")
+                .header("alg", "none")
+                .claim("preferred_username", "user1")
+                .claim("scope", "ROLE_USER")
+                .build();
 
-    /**
-     * Генерация мок JWT для контрактных тестов.
-     * В реальном проекте можно использовать библиотеку JWT или статический токен.
-     */
-    private String generateTestJwt() {
-        String header = Base64.getUrlEncoder().encodeToString("{\"alg\":\"none\"}".getBytes());
-        String payload = Base64.getUrlEncoder().encodeToString("{\"sub\":\"test-user\"}".getBytes());
-        String signature = "";
-        return header + "." + payload + "." + signature;
+        webTestClient = WebTestClient
+                .bindToApplicationContext(context)
+                .apply(springSecurity())
+                .configureClient()
+                .build()
+                .mutateWith(mockJwt().jwt(jwt).authorities(new SimpleGrantedAuthority("ROLE_USER")));
+
+        RestAssuredWebTestClient.webTestClient(webTestClient);
     }
 }

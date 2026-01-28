@@ -19,17 +19,9 @@ Contract.make {
     }
 
     response {
-        status 200
+        status 303
         headers {
-            contentType('application/json')
+            header('Location', '/main?info=transfer_ok')
         }
-        body([
-                success: true,
-                message: "Перевод успешно выполнен",
-                data   : [
-                        login: 'targetUser',
-                        value: 500.0
-                ]
-        ])
     }
 }

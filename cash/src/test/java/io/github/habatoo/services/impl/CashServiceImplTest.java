@@ -18,10 +18,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.util.function.Function;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -143,7 +145,7 @@ class CashServiceImplTest {
                         && res.getMessage().contains("Ошибка сохранения"))
                 .verifyComplete();
 
-        verify(webClient.post(), times(2)).uri(any(Function.class));
+        verify(webClient.post(), times(3)).uri(argThat((Function<UriBuilder, URI> f) -> true));
         verify(outboxClientService).saveEvent(argThat(event -> event.getStatus().name().equals("FAILURE")));
     }
 

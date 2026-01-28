@@ -59,6 +59,10 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+    testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
+    contractTestImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
+    testImplementation 'io.rest-assured:spring-web-test-client'
+
     cashIntegrationTestImplementation 'org.springframework.boot:spring-boot-starter-test'
     cashIntegrationTestImplementation 'io.projectreactor:reactor-test'
     cashIntegrationTestImplementation 'org.springframework.security:spring-security-test'

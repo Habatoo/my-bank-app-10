@@ -19,13 +19,9 @@ Contract.make {
     }
 
     response {
-        status 200
+        status 303
         headers {
-            contentType('application/json')
+            header('Location', '/main?info=success')
         }
-        body([
-                success: true,
-                message: "Операция успешно проведена"
-        ])
     }
 }
