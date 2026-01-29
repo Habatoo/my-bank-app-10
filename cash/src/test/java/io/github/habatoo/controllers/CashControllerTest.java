@@ -34,6 +34,7 @@ import static org.mockito.Mockito.*;
 class CashControllerTest {
 
     private final String TEST_USERNAME = "test_user";
+    private final String RUB = "RUB";
     private final String TEST_USER_ID = UUID.randomUUID().toString();
 
     @Mock
@@ -76,7 +77,7 @@ class CashControllerTest {
         when(cashService.processCashOperation(eq(TEST_USERNAME), any(CashDto.class)))
                 .thenReturn(Mono.just(successResult));
 
-        Mono<OperationResultDto<CashDto>> result = cashController.updateBalance(amount, action, jwt);
+        Mono<OperationResultDto<CashDto>> result = cashController.updateBalance(amount, action, RUB, jwt);
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> res.isSuccess() &&
@@ -107,7 +108,7 @@ class CashControllerTest {
         when(cashService.processCashOperation(eq(TEST_USERNAME), any(CashDto.class)))
                 .thenReturn(Mono.just(successResult));
 
-        Mono<OperationResultDto<CashDto>> result = cashController.updateBalance(amount, action, jwt);
+        Mono<OperationResultDto<CashDto>> result = cashController.updateBalance(amount, action, RUB, jwt);
 
         StepVerifier.create(result)
                 .expectNextMatches(OperationResultDto::isSuccess)
@@ -126,11 +127,15 @@ class CashControllerTest {
     @DisplayName("Обновление баланса: ошибка при передаче невалидного типа операции")
     void updateBalanceInvalidActionTest() {
         BigDecimal amount = new BigDecimal("100.00");
-        String invalidAction = "invalid_action";
+        String invalidAction = "INVALID";
 
-        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () ->
-                cashController.updateBalance(amount, invalidAction, jwt)
-        );
+        Mono<OperationResultDto<CashDto>> result = cashController
+                .updateBalance(amount, invalidAction, RUB, jwt);
+
+        StepVerifier.create(result)
+                .expectNextMatches(res -> !res.isSuccess() &&
+                        res.getMessage().contains("Неверный формат параметров:"))
+                .verifyComplete();
 
         verifyNoInteractions(cashService);
     }

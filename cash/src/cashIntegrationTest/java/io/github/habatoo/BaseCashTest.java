@@ -3,6 +3,7 @@ package io.github.habatoo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.habatoo.base.BaseTest;
 import io.github.habatoo.dto.CashDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.dto.enums.OperationType;
 import io.github.habatoo.models.Cash;
 import io.github.habatoo.repositories.OperationsRepository;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.oauth2.client.reactive.ReactiveOAuth2ClientAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -30,6 +32,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @ActiveProfiles("test")
 @SpringBootTest(
@@ -45,7 +48,8 @@ import java.time.LocalDateTime;
 )
 @EnableAutoConfiguration(exclude = {
         ReactiveSecurityAutoConfiguration.class,
-        ReactiveOAuth2ClientAutoConfiguration.class
+        ReactiveOAuth2ClientAutoConfiguration.class,
+        OAuth2ClientAutoConfiguration.class
 })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public abstract class BaseCashTest extends BaseTest {
@@ -109,6 +113,8 @@ public abstract class BaseCashTest extends BaseTest {
         return Cash.builder()
                 .username(name)
                 .amount(amount)
+                .currency(Currency.RUB)
+                .accountId(UUID.randomUUID())
                 .operationType(operationType)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -119,6 +125,8 @@ public abstract class BaseCashTest extends BaseTest {
             BigDecimal value) {
         return CashDto.builder()
                 .action(operationType)
+                .currency(Currency.RUB)
+                .accountId(UUID.randomUUID())
                 .value(value)
                 .build();
     }

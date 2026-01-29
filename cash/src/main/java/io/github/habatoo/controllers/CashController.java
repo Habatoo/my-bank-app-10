@@ -2,6 +2,7 @@ package io.github.habatoo.controllers;
 
 import io.github.habatoo.dto.CashDto;
 import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.dto.enums.OperationType;
 import io.github.habatoo.services.CashService;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +52,7 @@ public class CashController {
     public Mono<OperationResultDto<CashDto>> updateBalance(
             @RequestParam("value") BigDecimal value,
             @RequestParam("action") String action,
+            @RequestParam("currency") String currencyStr,
             @AuthenticationPrincipal Jwt jwt) {
 
         String login = jwt.getClaimAsString("preferred_username");
@@ -58,13 +60,27 @@ public class CashController {
 
         log.info("Запрос на операцию {} для пользователя {} на сумму {}", action, login, value);
 
-        OperationType operationType = OperationType.valueOf(action.toUpperCase());
-
-        CashDto cashDto = CashDto.builder()
+        CashDto.CashDtoBuilder cashDtoBuilder = CashDto.builder()
                 .userId(UUID.fromString(userIdStr))
-                .action(operationType)
                 .value(value)
-                .createdAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now());
+
+        OperationType operationType;
+        Currency currency;
+        try {
+            operationType = OperationType.valueOf(action.toUpperCase());
+            currency = Currency.valueOf(currencyStr);
+        } catch (IllegalArgumentException e) {
+            return Mono.just(OperationResultDto.<CashDto>builder()
+                    .success(false)
+                    .data(cashDtoBuilder.build())
+                    .message("Неверный формат параметров: " + e.getMessage())
+                    .build());
+        }
+
+        CashDto cashDto = cashDtoBuilder
+                .action(operationType)
+                .currency(currency)
                 .build();
 
         return cashService.processCashOperation(login, cashDto);

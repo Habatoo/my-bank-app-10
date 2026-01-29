@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 import reactor.test.StepVerifier;
 
@@ -51,17 +52,21 @@ class CashServiceIntegrationTest extends BaseCashTest {
 
     @Test
     @DisplayName("Успешное внесение наличных (PUT): AccountService -> DB -> Outbox")
-    void processCashOperation_PutSuccess() throws Exception {
+    void processCashOperationPutSuccessTest() throws Exception {
         String login = "test_user";
         CashDto cashDto = createCashDto(OperationType.PUT, new BigDecimal("1000.00"));
 
-        OperationResultDto<Void> accountRes = OperationResultDto.<Void>builder().success(true).build();
+        OperationResultDto<Void> accountResSuccess = OperationResultDto.<Void>builder()
+                .success(true)
+                .message("Операция успешно проведена и сохранена")
+                .build();
 
-        mockWebServer.enqueue(new MockResponse()
-                .setBody(objectMapper.writeValueAsString(accountRes))
+        mockWebServer.enqueue(new MockResponse().setBody(objectMapper.writeValueAsString(accountResSuccess))
+                .addHeader("Content-Type", "application/json"));
+        mockWebServer.enqueue(new MockResponse().setBody(objectMapper.writeValueAsString(accountResSuccess))
                 .addHeader("Content-Type", "application/json"));
 
-        when(outboxClientService.saveEvent(any())).thenReturn(reactor.core.publisher.Mono.empty());
+        when(outboxClientService.saveEvent(any())).thenReturn(Mono.empty());
 
         var result = operationsRepository.deleteAll()
                 .then(cashService.processCashOperation(login, cashDto));
@@ -87,7 +92,7 @@ class CashServiceIntegrationTest extends BaseCashTest {
 
     @Test
     @DisplayName("Ошибка БД: Списание прошло, БД упала -> Запуск компенсации")
-    void processCashOperation_DatabaseError_ShouldCompensate() throws Exception {
+    void processCashOperationDatabaseErrorShouldCompensateTest() throws Exception {
         CashDto cashDto = createCashDto(OperationType.GET, new BigDecimal("500.00"));
 
         OperationResultDto<Void> accountRes = OperationResultDto.<Void>builder().success(true).build();

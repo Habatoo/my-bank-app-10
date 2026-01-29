@@ -2,6 +2,7 @@ package io.github.habatoo.services.impl;
 
 import io.github.habatoo.dto.CashDto;
 import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.dto.enums.OperationType;
 import io.github.habatoo.models.Cash;
 import io.github.habatoo.repositories.OperationsRepository;
@@ -68,6 +69,7 @@ class CashServiceImplTest {
         CashDto cashDto = CashDto.builder()
                 .action(OperationType.PUT)
                 .value(BigDecimal.valueOf(1000))
+                .currency(Currency.RUB)
                 .build();
 
         OperationResultDto<Void> accountResponse = OperationResultDto.<Void>builder()
@@ -99,6 +101,7 @@ class CashServiceImplTest {
         CashDto cashDto = CashDto.builder()
                 .action(OperationType.PUT)
                 .value(BigDecimal.valueOf(1000))
+                .currency(Currency.RUB)
                 .build();
 
         OperationResultDto<Void> accountError = OperationResultDto.<Void>builder()
@@ -128,6 +131,7 @@ class CashServiceImplTest {
         CashDto cashDto = CashDto.builder()
                 .action(OperationType.PUT)
                 .value(BigDecimal.valueOf(500))
+                .currency(Currency.RUB)
                 .build();
 
         OperationResultDto<Void> accountSuccess = OperationResultDto.<Void>builder().success(true).build();

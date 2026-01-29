@@ -93,6 +93,7 @@ class CashControllerCashedTest {
                         .path("/cash")
                         .queryParam("value", amount)
                         .queryParam("action", "PUT")
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isOk()
@@ -117,6 +118,7 @@ class CashControllerCashedTest {
                         .path("/cash")
                         .queryParam("value", 100)
                         .queryParam("action", "PUT")
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isForbidden();
@@ -131,12 +133,14 @@ class CashControllerCashedTest {
         webTestClient
                 .mutateWith(csrf())
                 .mutateWith(mockJwt()
+                        .jwt(jwt -> jwt.claim("preferred_username", "test_user"))
                         .authorities(new SimpleGrantedAuthority("ROLE_USER")))
                 .post()
                 .uri(uriBuilder -> uriBuilder
                         .path("/cash")
                         .queryParam("value", 100)
                         .queryParam("action", "INVALID_TYPE")
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().is5xxServerError();

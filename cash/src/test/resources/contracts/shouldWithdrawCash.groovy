@@ -11,6 +11,7 @@ Contract.make {
             queryParameters {
                 parameter 'value', '50.00'
                 parameter 'action', 'GET'
+                parameter 'currency', 'RUB'
             }
         }
         headers {
@@ -27,7 +28,8 @@ Contract.make {
                 success: true,
                 data: [
                         value: 50.00,
-                        action: "GET"
+                        action: "GET",
+                        currency: "RUB"
                 ],
                 message: "Операция успешно проведена и сохранена"
         )

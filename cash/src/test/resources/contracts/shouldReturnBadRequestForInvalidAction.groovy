@@ -3,7 +3,7 @@ package contracts
 import org.springframework.cloud.contract.spec.Contract
 
 Contract.make {
-    description "Возвращает BAD_REQUEST если передан неверный action"
+    description "Возвращает успех=false если передан неверный action или currency"
 
     request {
         method 'POST'
@@ -11,6 +11,7 @@ Contract.make {
             queryParameters {
                 parameter 'value', '100.00'
                 parameter 'action', 'INVALID_ACTION'
+                parameter 'currency', 'RUB'
             }
         }
         headers {
@@ -19,13 +20,13 @@ Contract.make {
     }
 
     response {
-        status 400
+        status 200
         headers {
             contentType(applicationJson())
         }
-        body([
-                code: "VALIDATION_ERROR",
-                message: "No enum constant io.github.habatoo.dto.enums.OperationType.INVALID_ACTION"
-        ])
+        body(
+                success: false,
+                message: "Неверный формат параметров: No enum constant io.github.habatoo.dto.enums.OperationType.INVALID_ACTION"
+        )
     }
 }

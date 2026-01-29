@@ -43,13 +43,14 @@ public class CashServiceImpl implements CashService {
     @Override
     public Mono<OperationResultDto<CashDto>> processCashOperation(String login, CashDto cashDto) {
         BigDecimal amountChange = calculateAmountChange(cashDto);
+        String currency = cashDto.getCurrency().name();
 
-        return updateAccountBalance(login, amountChange)
+        return updateAccountBalance(login, amountChange, currency)
                 .flatMap(cashRes -> {
                     if (!cashRes.isSuccess()) {
                         return Mono.just(handleAccountError(cashRes));
                     }
-                    return completeCashOperation(login, cashDto, amountChange);
+                    return completeCashOperation(login, cashDto, amountChange, currency);
                 });
     }
 
@@ -57,7 +58,11 @@ public class CashServiceImpl implements CashService {
      * Завершение операции: сохранение в локальную БД и фиксация события в Outbox.
      * В случае ошибки БД запускается компенсация во внешнем сервисе.
      */
-    private Mono<OperationResultDto<CashDto>> completeCashOperation(String login, CashDto cashDto, BigDecimal amountChange) {
+    private Mono<OperationResultDto<CashDto>> completeCashOperation(
+            String login,
+            CashDto cashDto,
+            BigDecimal amountChange,
+            String currency) {
         Cash operation = buildCashEntity(login, cashDto);
 
         return operationsRepository.save(operation)
@@ -65,17 +70,20 @@ public class CashServiceImpl implements CashService {
                 .thenReturn(buildSuccessResponse(cashDto))
                 .onErrorResume(e -> {
                     log.error("ОШИБКА БД в CashService для {}. Запуск компенсации...", login);
-                    return compensateAccountUpdate(login, amountChange)
+                    return compensateAccountUpdate(login, amountChange, currency)
                             .then(saveNotification(login, cashDto, EventStatus.FAILURE))
                             .then(Mono.just(buildDatabaseErrorResponse(cashDto)));
                 });
     }
 
-    private Mono<Void> compensateAccountUpdate(String login, BigDecimal originalAmountChange) {
+    private Mono<Void> compensateAccountUpdate(
+            String login,
+            BigDecimal originalAmountChange,
+            String currency) {
         BigDecimal compensationAmount = originalAmountChange.negate();
         log.info("Компенсация: Возврат суммы {} для пользователя {}", compensationAmount, login);
 
-        return updateAccountBalance(login, compensationAmount)
+        return updateAccountBalance(login, compensationAmount, currency)
                 .flatMap(res -> {
                     if (!res.isSuccess()) {
                         log.error("ФАТАЛЬНАЯ ОШИБКА: Не удалось компенсировать баланс для {}", login);
@@ -103,6 +111,7 @@ public class CashServiceImpl implements CashService {
                 .sourceService("cash-service")
                 .payload(Map.of(
                         "amount", dto.getValue(),
+                        "currency", dto.getCurrency().name(),
                         "operationType", actionName
                 ))
                 .build();
@@ -120,7 +129,7 @@ public class CashServiceImpl implements CashService {
                 : cashDto.getValue().negate();
     }
 
-    private Mono<OperationResultDto<Void>> updateAccountBalance(String login, BigDecimal amount) {
+    private Mono<OperationResultDto<Void>> updateAccountBalance(String login, BigDecimal amount, String currency) {
         CircuitBreaker cb = registry.circuitBreaker("cash-service-cb");
 
         return webClient.post()
@@ -129,6 +138,7 @@ public class CashServiceImpl implements CashService {
                         .path("/api/account/balance")
                         .queryParam("login", login)
                         .queryParam("amount", amount)
+                        .queryParam("currency", currency)
                         .build())
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<OperationResultDto<Void>>() {
@@ -140,8 +150,10 @@ public class CashServiceImpl implements CashService {
         return Cash.builder()
                 .username(login)
                 .amount(cashDto.getValue())
+                .currency(cashDto.getCurrency())
                 .operationType(cashDto.getAction())
                 .createdAt(LocalDateTime.now())
+                .accountId(cashDto.getAccountId())
                 .build();
     }
 

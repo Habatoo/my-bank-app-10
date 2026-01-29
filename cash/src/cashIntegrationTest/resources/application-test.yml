@@ -12,3 +12,18 @@ spring:
       enabled: false
   liquibase:
     enabled: false
+
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: test-client
+            client-secret: test-secret
+            scope: openid
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:9999/realms/bank
+            authorization-uri: http://localhost:9999/auth
+            token-uri: http://localhost:9999/token
+            jwk-set-uri: http://localhost:9999/jwks
