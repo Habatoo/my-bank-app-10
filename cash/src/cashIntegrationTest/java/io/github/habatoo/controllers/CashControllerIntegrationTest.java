@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
@@ -24,6 +25,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt;
 
 /**
@@ -56,6 +58,8 @@ class CashControllerIntegrationTest {
         String mockLogin = "user_ivan";
         UUID mockUserId = UUID.randomUUID();
         BigDecimal value = new BigDecimal("1000.00");
+        String action = "PUT";
+        String currency = "RUB";
 
         CashDto responseDto = CashDto.builder()
                 .userId(mockUserId)
@@ -70,10 +74,11 @@ class CashControllerIntegrationTest {
                 .data(responseDto)
                 .build();
 
-        when(cashService.processCashOperation(eq(value), eq(mockLogin), any(CashDto.class)))
+        when(cashService.processCashOperation(eq(value), eq(action), eq(currency), any(Jwt.class)))
                 .thenReturn(Mono.just(result));
 
         webTestClient
+                .mutateWith(csrf())
                 .mutateWith(mockJwt()
                         .authorities(new SimpleGrantedAuthority("ROLE_USER"))
                         .jwt(jwt -> jwt
@@ -83,15 +88,13 @@ class CashControllerIntegrationTest {
                 .uri(uriBuilder -> uriBuilder
                         .path("/cash")
                         .queryParam("value", "1000.00")
-                        .queryParam("action", "PUT")
-                        .queryParam("currency", "RUB")
+                        .queryParam("action", action)
+                        .queryParam("currency", currency)
                         .build())
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.data.action").isEqualTo("PUT")
-                .jsonPath("$.data.currency").isEqualTo("RUB")
                 .jsonPath("$.data.userId").isEqualTo(mockUserId.toString());
     }
 
@@ -132,18 +135,16 @@ class CashControllerIntegrationTest {
     @Test
     @DisplayName("POST /cash - Успех для роли CASH_ACCESS")
     void cashAccessRoleTest() {
-        String mockLogin = "cashier_1";
-        UUID mockUserId = UUID.randomUUID();
+        BigDecimal value = new BigDecimal("50.00");
 
-        when(cashService.processCashOperation(anyString(), any(CashDto.class)))
+        when(cashService.processCashOperation(any(BigDecimal.class), anyString(), anyString(), any(Jwt.class)))
                 .thenReturn(Mono.just(OperationResultDto.<CashDto>builder().success(true).build()));
 
         webTestClient
+                .mutateWith(csrf())
                 .mutateWith(mockJwt()
                         .authorities(new SimpleGrantedAuthority("ROLE_CASH_ACCESS"))
-                        .jwt(jwt -> jwt
-                                .claim("preferred_username", mockLogin)
-                                .subject(mockUserId.toString())))
+                        .jwt(jwt -> jwt.claim("preferred_username", "cashier_1")))
                 .post()
                 .uri(uriBuilder -> uriBuilder
                         .path("/cash")

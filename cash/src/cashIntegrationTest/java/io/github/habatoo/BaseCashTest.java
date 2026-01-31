@@ -114,7 +114,6 @@ public abstract class BaseCashTest extends BaseTest {
                 .username(name)
                 .amount(amount)
                 .currency(Currency.RUB)
-                .accountId(UUID.randomUUID())
                 .operationType(operationType)
                 .createdAt(LocalDateTime.now())
                 .build();
