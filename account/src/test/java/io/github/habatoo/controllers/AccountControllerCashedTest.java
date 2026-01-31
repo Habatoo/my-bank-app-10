@@ -15,6 +15,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -154,7 +155,6 @@ class AccountControllerCashedTest {
 
     @Test
     @DisplayName("Успешное открытие счета администратором")
-    @WithMockUser(roles = "ADMIN")
     void openAccountShouldReturnSuccessWhenUserIsAdminTest() {
         String login = "testuser";
         String currency = "USD";
@@ -168,10 +168,12 @@ class AccountControllerCashedTest {
 
         webTestClient
                 .mutateWith(csrf())
+                .mutateWith(mockJwt()
+                        .jwt(j -> j.claim("preferred_username", login))
+                        .authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
                 .post()
                 .uri(uriBuilder -> uriBuilder
-                        .path("/account")
-                        .queryParam("login", login)
+                        .path("/open-account")
                         .queryParam("currency", currency)
                         .build())
                 .exchange()
@@ -185,23 +187,25 @@ class AccountControllerCashedTest {
 
     @Test
     @DisplayName("Ошибка открытия счета при неверных параметрах")
-    @WithMockUser(roles = "ACCOUNT_ACCESS")
     void openAccountShouldReturnErrorWhenServiceFailsTest() {
+        String testLogin = "test_user";
         OperationResultDto<Void> errorResponse = OperationResultDto.<Void>builder()
                 .success(false)
                 .errorCode("INVALID_CURRENCY")
                 .message("Допустимые валюты: RUB, USD, CNY")
                 .build();
 
-        when(accountService.openAccount(anyString(), anyString()))
+        when(accountService.openAccount(eq(testLogin), eq("EUR")))
                 .thenReturn(Mono.just(errorResponse));
 
         webTestClient
                 .mutateWith(csrf())
+                .mutateWith(SecurityMockServerConfigurers.mockJwt()
+                        .jwt(jwt -> jwt.claim("preferred_username", testLogin))
+                        .authorities(new SimpleGrantedAuthority("ROLE_ACCOUNT_ACCESS")))
                 .post()
                 .uri(uriBuilder -> uriBuilder
-                        .path("/account")
-                        .queryParam("login", "user")
+                        .path("/open-account")
                         .queryParam("currency", "EUR")
                         .build())
                 .exchange()
@@ -213,14 +217,13 @@ class AccountControllerCashedTest {
 
     @Test
     @DisplayName("Доступ запрещен для пользователя без нужной роли")
-    @WithMockUser(roles = "USER")
+    @WithMockUser(roles = "GUEST")
     void openAccountShouldReturnForbiddenWhenUserHasNoRightsTest() {
         webTestClient
                 .mutateWith(csrf())
                 .post()
                 .uri(uriBuilder -> uriBuilder
-                        .path("/account")
-                        .queryParam("login", "any")
+                        .path("/open-account")
                         .queryParam("currency", "RUB")
                         .build())
                 .exchange()

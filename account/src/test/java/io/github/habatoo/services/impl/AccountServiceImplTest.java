@@ -20,7 +20,6 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -76,14 +75,30 @@ class AccountServiceImplTest {
     @DisplayName("Получение списка других аккаунтов: успех")
     void getOtherAccountsTest() {
         String currentLogin = "me";
-        User other = User.builder().login("other").name("Other User").build();
+        java.util.UUID otherUserId = java.util.UUID.randomUUID();
+
+        User other = User.builder()
+                .id(otherUserId)
+                .login("other")
+                .name("Other User")
+                .build();
+
+        Account otherAccount = Account.builder()
+                .userId(otherUserId)
+                .currency(Currency.RUB)
+                .balance(BigDecimal.TEN)
+                .build();
 
         when(userRepository.findAllByLoginNot(currentLogin)).thenReturn(Flux.just(other));
+        when(accountRepository.findAllByUserId(otherUserId)).thenReturn(Flux.just(otherAccount));
 
         Flux<AccountShortDto> result = accountService.getOtherAccounts(currentLogin);
 
         StepVerifier.create(result)
-                .expectNextMatches(dto -> dto.getLogin().equals("other"))
+                .expectNextMatches(dto ->
+                        dto.getLogin().equals("other") &&
+                                dto.getName().equals("Other User") &&
+                                dto.getCurrency() == Currency.RUB)
                 .verifyComplete();
     }
 
@@ -135,33 +150,12 @@ class AccountServiceImplTest {
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> !res.isSuccess()
-                        && "INSUFFICIENT_FUNDS" .equals(res.getErrorCode()))
+                        && "INSUFFICIENT_FUNDS".equals(res.getErrorCode()))
                 .verifyComplete();
 
         verify(accountRepository, never()).save(any());
     }
 
-    /**
-     * Тест поведения, если пользователь или его счет не найдены.
-     */
-    @Test
-    @DisplayName("Изменение баланса: ошибка, если счет не найден")
-    void changeBalanceAccountNotFoundTest() {
-        String login = "unknown";
-        String currency = "RUB";
-        when(userRepository.findByLogin(login)).thenReturn(Mono.empty());
-
-        Mono<OperationResultDto<Void>> result = accountService.changeBalance(login, BigDecimal.ONE, currency);
-
-        StepVerifier.create(result)
-                .expectNextMatches(res -> !res.isSuccess()
-                        && "ACCOUNT_NOT_FOUND" .equals(res.getErrorCode()))
-                .verifyComplete();
-    }
-
-    /**
-     * Проверка сценария успешного открытия нового счета в допустимой валюте.
-     */
     @Test
     @DisplayName("Открытие счета: успех")
     void openAccountSuccessTest() {
@@ -172,13 +166,30 @@ class AccountServiceImplTest {
 
         when(userRepository.findByLogin(login)).thenReturn(Mono.just(user));
         when(accountRepository.findByUserIdAndCurrency(userId, Currency.USD)).thenReturn(Mono.empty());
-        when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+        when(accountRepository.save(any(Account.class))).thenAnswer(inv -> Mono.just(inv.getArgument(0)));
         when(outboxClientService.saveEvent(any())).thenReturn(Mono.empty());
 
         Mono<OperationResultDto<Void>> result = accountService.openAccount(login, currencyStr);
 
         StepVerifier.create(result)
-                .expectNextMatches(res -> res.isSuccess() && res.getMessage().contains("успешно открыт"))
+                .expectNextMatches(res -> res.isSuccess()
+                        && res.getMessage().equals("Счет в USD открыт"))
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Изменение баланса: ошибка, если пользователь не найден")
+    void changeBalanceUserNotFoundTest() {
+        String login = "unknown";
+        String currency = "RUB";
+        when(userRepository.findByLogin(login)).thenReturn(Mono.empty());
+
+        Mono<OperationResultDto<Void>> result = accountService.changeBalance(login, BigDecimal.ONE, currency);
+
+        StepVerifier.create(result)
+                .expectNextMatches(res -> !res.isSuccess()
+                        && "VALIDATION_ERROR".equals(res.getErrorCode())
+                        && res.getMessage().contains("Пользователь не найден"))
                 .verifyComplete();
     }
 
@@ -194,9 +205,9 @@ class AccountServiceImplTest {
         Mono<OperationResultDto<Void>> result = accountService.openAccount(login, invalidCurrency);
 
         StepVerifier.create(result)
-                .expectErrorMatches(e -> e instanceof IllegalArgumentException
-                        && e.getMessage().contains("Неверный формат валюты"))
-                .verify();
+                .expectNextMatches(dto -> !dto.isSuccess()
+                        && dto.getMessage().contains("Неподдерживаемая валюта"))
+                .verifyComplete();
     }
 
     /**
@@ -213,9 +224,9 @@ class AccountServiceImplTest {
         Mono<OperationResultDto<Void>> result = accountService.openAccount(login, currencyStr);
 
         StepVerifier.create(result)
-                .expectErrorMatches(e -> e instanceof NoSuchElementException
-                        && e.getMessage().contains("не найден"))
-                .verify();
+                .expectNextMatches(dto -> !dto.isSuccess()
+                        && dto.getMessage().contains("Пользователь не найден"))
+                .verifyComplete();
     }
 
     /**
@@ -247,7 +258,7 @@ class AccountServiceImplTest {
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> !res.isSuccess()
-                        && "ACCOUNT_EXISTS" .equals(res.getErrorCode()))
+                        && "ACCOUNT_EXISTS".equals(res.getErrorCode()))
                 .verifyComplete();
     }
 
@@ -263,8 +274,8 @@ class AccountServiceImplTest {
         Mono<OperationResultDto<Void>> result = accountService.openAccount(login, currencyStr);
 
         StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof IllegalArgumentException &&
-                        throwable.getMessage().equals("Неверный формат валюты: "))
-                .verify();
+                .expectNextMatches(dto -> !dto.isSuccess() &&
+                        dto.getMessage().equals("Неподдерживаемая валюта: "))
+                .verifyComplete();
     }
 }

@@ -1,6 +1,5 @@
 package io.github.habatoo.services.impl;
 
-import io.github.habatoo.dto.AccountFullResponseDto;
 import io.github.habatoo.dto.PasswordUpdateDto;
 import io.github.habatoo.dto.UserProfileResponseDto;
 import io.github.habatoo.dto.UserUpdateDto;
@@ -55,7 +54,7 @@ class UserServiceImplTest {
     private OutboxClientService outboxClientService;
 
     @Mock
-    private WebClient webClient;
+    private WebClient backgroundWebClient;
 
     @Mock
     private WebClient.RequestHeadersUriSpec uriSpec;
@@ -114,9 +113,7 @@ class UserServiceImplTest {
     @DisplayName("Получение пользователя: регистрация нового пользователя из JWT")
     void getOrCreateUserRegistrationTest() {
         when(jwt.getClaimAsString("given_name")).thenReturn("New User");
-        when(jwt.getClaim("birthdate")).thenReturn("1990-01-01");
         when(jwt.getClaimAsString("birthdate")).thenReturn("1990-01-01");
-
         when(userRepository.findByLogin(LOGIN)).thenReturn(Mono.empty());
         when(userRepository.save(any(User.class))).thenAnswer(i -> Mono.just(i.getArgument(0)));
         when(outboxClientService.saveEvent(any())).thenReturn(Mono.empty());
@@ -139,18 +136,16 @@ class UserServiceImplTest {
     @DisplayName("Обновление профиля: успех")
     void updateProfileSuccessTest() {
         User user = User.builder().id(USER_ID).login(LOGIN).name("Old Name").build();
-        Account account = Account.builder().userId(USER_ID).balance(BigDecimal.ZERO).build();
+        Account rubAccount = Account.builder().userId(USER_ID).currency(Currency.RUB).balance(BigDecimal.TEN).build();
         UserUpdateDto updateDto = new UserUpdateDto("New Name", LocalDate.of(1990, 1, 1));
 
         when(userRepository.findByLogin(LOGIN)).thenReturn(Mono.just(user));
         when(userRepository.save(any(User.class))).thenAnswer(i -> Mono.just(i.getArgument(0)));
-        when(accountRepository.findByUserIdAndCurrency(USER_ID, Currency.RUB)).thenReturn(Mono.just(account));
+        when(accountRepository.findAllByUserId(USER_ID)).thenReturn(Flux.just(rubAccount));
         when(outboxClientService.saveEvent(any())).thenReturn(Mono.empty());
 
-        Mono<AccountFullResponseDto> result = userService.updateProfile(LOGIN, updateDto);
-
-        StepVerifier.create(result)
-                .expectNextMatches(dto -> dto.getName().equals("New Name"))
+        StepVerifier.create(userService.updateProfile(LOGIN, updateDto))
+                .expectNextMatches(dto -> dto.getName().equals("New Name") && dto.getBalance().equals(BigDecimal.TEN))
                 .verifyComplete();
 
         verify(userRepository).save(argThat(u -> u.getName().equals("New Name")));
@@ -165,34 +160,29 @@ class UserServiceImplTest {
     @DisplayName("Обновление пароля: успех")
     void updatePasswordSuccessTest() {
         PasswordUpdateDto dto = new PasswordUpdateDto("newPass", "newPass");
-        String userId = "kc-uuid-123";
+        String kcUserId = "kc-uuid-123";
 
         WebClient.RequestHeadersUriSpec getUriSpec = mock(WebClient.RequestHeadersUriSpec.class);
         WebClient.RequestHeadersSpec getHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
         WebClient.ResponseSpec getResponseSpec = mock(WebClient.ResponseSpec.class);
 
-        when(webClient.get()).thenReturn(getUriSpec);
+        when(backgroundWebClient.get()).thenReturn(getUriSpec);
         when(getUriSpec.uri(anyString(), eq(LOGIN))).thenReturn(getHeadersSpec);
         when(getHeadersSpec.retrieve()).thenReturn(getResponseSpec);
-        when(getResponseSpec.bodyToFlux(Map.class))
-                .thenReturn(Flux.just(Map.of("id", userId, "username", LOGIN)));
+        when(getResponseSpec.bodyToFlux(Map.class)).thenReturn(Flux.just(Map.of("id", kcUserId, "username", LOGIN)));
 
         WebClient.RequestBodyUriSpec putUriSpec = mock(WebClient.RequestBodyUriSpec.class);
         WebClient.RequestBodySpec putBodySpec = mock(WebClient.RequestBodySpec.class);
         WebClient.RequestHeadersSpec putHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
         WebClient.ResponseSpec putResponseSpec = mock(WebClient.ResponseSpec.class);
 
-        when(webClient.put()).thenReturn(putUriSpec);
-        when(putUriSpec.uri(anyString(), eq(userId))).thenReturn(putBodySpec);
+        when(backgroundWebClient.put()).thenReturn(putUriSpec);
+        when(putUriSpec.uri(anyString(), eq(kcUserId))).thenReturn(putBodySpec);
         when(putBodySpec.bodyValue(any())).thenReturn(putHeadersSpec);
         when(putHeadersSpec.retrieve()).thenReturn(putResponseSpec);
-
-        when(putResponseSpec.onStatus(any(), any())).thenReturn(putResponseSpec);
         when(putResponseSpec.toBodilessEntity()).thenReturn(Mono.just(ResponseEntity.ok().build()));
 
-        Mono<Boolean> result = userService.updatePassword(LOGIN, dto);
-
-        StepVerifier.create(result)
+        StepVerifier.create(userService.updatePassword(LOGIN, dto))
                 .expectNext(true)
                 .verifyComplete();
     }
@@ -202,41 +192,43 @@ class UserServiceImplTest {
      * Важно проверить, что цепочка не прервется ошибкой, а просто вернет пустой Mono (или ошибку).
      */
     @Test
-    @DisplayName("Обновление профиля: счет в RUB не найден")
+    @DisplayName("Обновление профиля: счет в RUB не найден (возврат профиля с 0 балансом)")
     void updateProfileAccountNotFoundTest() {
         User user = User.builder().id(USER_ID).login(LOGIN).name("Ivan").build();
         UserUpdateDto updateDto = new UserUpdateDto("New Name", LocalDate.of(1990, 1, 1));
 
         when(userRepository.findByLogin(LOGIN)).thenReturn(Mono.just(user));
         when(userRepository.save(any(User.class))).thenReturn(Mono.just(user));
-        when(accountRepository.findByUserIdAndCurrency(USER_ID, Currency.RUB)).thenReturn(Mono.empty());
+        when(accountRepository.findAllByUserId(USER_ID)).thenReturn(Flux.empty());
+        when(outboxClientService.saveEvent(any())).thenReturn(Mono.empty());
 
-        Mono<AccountFullResponseDto> result = userService.updateProfile(LOGIN, updateDto);
-
-        StepVerifier.create(result)
+        StepVerifier.create(userService.updateProfile(LOGIN, updateDto))
+                .expectNextMatches(dto -> dto.getBalance().equals(BigDecimal.ZERO))
                 .verifyComplete();
-
-        verify(outboxClientService, never()).saveEvent(any());
     }
 
     /**
      * Тест обновления пароля: имитация ошибки Keycloak.
      */
     @Test
-    @DisplayName("Обновление пароля: возврат false при ошибке API")
+    @DisplayName("Обновление пароля: ошибка при поиске пользователя (проброс исключения)")
     void updatePasswordKeycloakErrorTest() {
-        String login = "test_user";
         PasswordUpdateDto dto = new PasswordUpdateDto("old", "new");
 
-        when(webClient.get()).thenReturn(uriSpec);
-        when(uriSpec.uri(anyString(), eq(login))).thenReturn(headersSpec);
-        when(headersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToFlux(Map.class)).thenReturn(Flux.error(new RuntimeException("Access Denied")));
+        WebClient.RequestHeadersUriSpec getUriSpec = mock(WebClient.RequestHeadersUriSpec.class);
+        WebClient.RequestHeadersSpec getHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
+        WebClient.ResponseSpec getResponseSpec = mock(WebClient.ResponseSpec.class);
 
-        Mono<Boolean> result = userService.updatePassword(login, dto);
+        when(backgroundWebClient.get()).thenReturn(getUriSpec);
+        when(getUriSpec.uri(anyString(), eq(LOGIN))).thenReturn(getHeadersSpec);
+        when(getHeadersSpec.retrieve()).thenReturn(getResponseSpec);
 
-        StepVerifier.create(result)
-                .expectNext(false)
-                .verifyComplete();
+        when(getResponseSpec.bodyToFlux(Map.class))
+                .thenReturn(Flux.error(new RuntimeException("KC Down")));
+
+        StepVerifier.create(userService.updatePassword(LOGIN, dto))
+                .expectErrorMatches(throwable -> throwable instanceof RuntimeException
+                        && throwable.getMessage().equals("KC Down"))
+                .verify();
     }
 }

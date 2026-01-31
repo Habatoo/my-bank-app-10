@@ -127,7 +127,7 @@ class AccountControllerTest {
     @Test
     @DisplayName("Открытие счета: успешный сценарий")
     void openAccountSuccessTest() {
-        String login = "user1";
+        String login = "test_user";
         String currency = "USD";
         OperationResultDto<Void> successResult = OperationResultDto.<Void>builder()
                 .success(true)

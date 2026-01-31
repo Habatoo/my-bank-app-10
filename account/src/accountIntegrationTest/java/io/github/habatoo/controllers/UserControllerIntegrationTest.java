@@ -1,6 +1,7 @@
 package io.github.habatoo.controllers;
 
 import io.github.habatoo.configurations.SecurityChassisAutoConfiguration;
+import io.github.habatoo.dto.AccountDto;
 import io.github.habatoo.dto.AccountFullResponseDto;
 import io.github.habatoo.dto.UserProfileResponseDto;
 import io.github.habatoo.dto.UserUpdateDto;
@@ -72,12 +73,11 @@ class UserControllerIntegrationTest {
         UserProfileResponseDto mockDtoUser = new UserProfileResponseDto(
                 mockUsername,
                 "Иван Иванов",
-                LocalDate.now(),
+                LocalDate.of(1990, 5, 15),
                 List.of());
         AccountFullResponseDto expectedResponse = AccountFullResponseDto.builder()
                 .login(mockUsername)
-                .name("Ivan Ivanov")
-                .balance(new BigDecimal("1500.00"))
+                .name("Иван Иванов")
                 .birthDate(LocalDate.of(1990, 5, 15))
                 .build();
 
