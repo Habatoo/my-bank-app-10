@@ -3,7 +3,6 @@ CREATE TABLE IF NOT EXISTS operations (
     username VARCHAR(50) NOT NULL,
     amount DECIMAL(19, 4) NOT NULL,
     currency VARCHAR(20) NOT NULL,
-    account_id UUID NOT NULL,
     operation_type VARCHAR(10) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -20,7 +19,6 @@ COMMENT ON COLUMN operations.id IS 'id пользователя, соверши�
 COMMENT ON COLUMN operations.username IS 'Логин пользователя, совершившего действие';
 COMMENT ON COLUMN operations.amount IS 'Сумма операции';
 COMMENT ON COLUMN operations.currency IS 'Валюта операции';
-COMMENT ON COLUMN operations.account_id IS 'id счета на который проведена операция';
 COMMENT ON COLUMN operations.operation_type IS 'Тип операции: PUT (положить) или GET (снять)';
 COMMENT ON COLUMN operations.created_at IS 'Дата операции';
 

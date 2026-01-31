@@ -93,8 +93,6 @@ public abstract class BaseContractTest {
     void setup() {
         String mockSubject = "367c3cf3-af3e-44af-ab7b-6d2034c6fca6";
         UUID userId = UUID.fromString(mockSubject);
-        String mockUsername = "user1";
-
         LocalDateTime localDateTime = LocalDateTime.of(2026, 2, 2, 10, 10, 10);
 
         CashDto depositResponseData = CashDto.builder()
@@ -116,7 +114,7 @@ public abstract class BaseContractTest {
 
         CashDto withdrawResponseData = CashDto.builder()
                 .id(UUID.randomUUID())
-                .userId(UUID.randomUUID())
+                .userId(userId)
                 .value(new BigDecimal("50.00"))
                 .currency(Currency.RUB)
                 .action(OperationType.GET)
@@ -130,34 +128,27 @@ public abstract class BaseContractTest {
                 .data(withdrawResponseData)
                 .build();
 
-        OperationResultDto<CashDto> defaultErrorResponse = OperationResultDto.<CashDto>builder()
-                .success(false)
-                .message("Операция отклонена (Mock)")
-                .build();
-
-        when(cashService.processCashOperation(any(), any()))
-                .thenReturn(Mono.just(defaultErrorResponse));
-
-        when(cashService.processCashOperation(anyString(), any(CashDto.class)))
+        when(cashService.processCashOperation(any(), any(), any(), any()))
                 .thenAnswer(invocation -> {
-                    String login = invocation.getArgument(0);
-                    CashDto dto = invocation.getArgument(1);
+                    BigDecimal value = invocation.getArgument(0);
+                    String action = invocation.getArgument(1);
+                    String currency = invocation.getArgument(2);
+                    Jwt jwt = invocation.getArgument(3);
 
-                    if ("user1".equals(login) && dto.getAction() == OperationType.PUT
-                            && dto.getValue().compareTo(new BigDecimal("100.00")) == 0) {
+                    String username = jwt.getClaimAsString("preferred_username");
 
-                        return Mono.just(depositResponse);
-                    }
-
-                    if ("user1".equals(login) && dto.getAction() == OperationType.GET
-                            && dto.getValue().compareTo(new BigDecimal("50.00")) == 0) {
-
-                        return Mono.just(withdrawResponse);
+                    if ("user1".equals(username) && "RUB".equalsIgnoreCase(currency)) {
+                        if ("PUT".equalsIgnoreCase(action) && value.compareTo(new BigDecimal("100.00")) == 0) {
+                            return Mono.just(depositResponse);
+                        }
+                        if ("GET".equalsIgnoreCase(action) && value.compareTo(new BigDecimal("50.00")) == 0) {
+                            return Mono.just(withdrawResponse);
+                        }
                     }
 
                     return Mono.just(OperationResultDto.<CashDto>builder()
                             .success(false)
-                            .message("No mock match for: " + dto.getAction())
+                            .message("No mock match")
                             .build());
                 });
 
@@ -168,7 +159,7 @@ public abstract class BaseContractTest {
         Jwt jwt = Jwt.withTokenValue("dummy-token")
                 .header("alg", "none")
                 .claim("preferred_username", "user1")
-                .claim("scope", "ROLE_USER")
+                .subject(mockSubject)
                 .build();
 
         webTestClient = WebTestClient

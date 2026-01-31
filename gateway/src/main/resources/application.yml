@@ -11,6 +11,7 @@ spring:
       host: ${CONSUL_HOST:localhost}
       port: 8500
       discovery:
+        enabled: true
         prefer-ip-address: true
         health-check-path: /actuator/health
         health-check-interval: 10s
@@ -37,10 +38,19 @@ spring:
                   args:
                     name: accountServiceCB
                     fallbackUri: forward:/fallback/account-unavailable
+            - id: registration-route
+              uri: lb://account
+              predicates:
+                - Path=/api/account/password
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: accountServiceCB
+                    fallbackUri: forward:/fallback/account-unavailable
             - id: account-service
               uri: lb://account
               predicates:
-                - Path=/api/main/user, /api/main/users, /api/account/update, /api/account/balance
+                - Path=/api/main/user, /api/main/users, /api/account/update, /api/account/balance, /api/account/password, /api/account/account, /api/account/open-account
               filters:
                 - TokenRelay=
                 - StripPrefix=2
@@ -62,7 +72,7 @@ spring:
             - id: transfer-service
               uri: lb://transfer
               predicates:
-                - Path=/api/main/transfer
+                - Path=/api/main/transfer, /api/main/self-transfer
               filters:
                 - TokenRelay=
                 - StripPrefix=2

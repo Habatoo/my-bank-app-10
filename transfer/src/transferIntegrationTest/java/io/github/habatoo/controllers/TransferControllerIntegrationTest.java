@@ -90,6 +90,7 @@ class TransferControllerIntegrationTest {
                         .path("/transfer")
                         .queryParam("value", amount.toString())
                         .queryParam("account", targetLogin)
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isOk()
@@ -111,6 +112,7 @@ class TransferControllerIntegrationTest {
                         .path("/transfer")
                         .queryParam("value", "-100.00")
                         .queryParam("account", "target")
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isOk()
@@ -133,6 +135,7 @@ class TransferControllerIntegrationTest {
                         .path("/transfer")
                         .queryParam("value", "10.00")
                         .queryParam("account", "target")
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isOk();
@@ -149,6 +152,7 @@ class TransferControllerIntegrationTest {
                         .path("/transfer")
                         .queryParam("value", "100.00")
                         .queryParam("account", "target")
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isForbidden();
@@ -163,6 +167,7 @@ class TransferControllerIntegrationTest {
                         .path("/transfer")
                         .queryParam("value", "100.00")
                         .queryParam("account", "target")
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isUnauthorized();

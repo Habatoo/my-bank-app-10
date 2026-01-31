@@ -11,6 +11,7 @@ Contract.make {
             queryParameters {
                 parameter 'value', '100.00'
                 parameter 'account', 'targetUser'
+                parameter 'currency', 'RUB'
             }
         }
         headers {
@@ -29,7 +30,8 @@ Contract.make {
                 message: "Перевод успешно выполнен",
                 data: [
                         login: 'targetUser',
-                        value: 100.0
+                        value: 100.0,
+                        currency: 'RUB'
                 ]
         )
     }

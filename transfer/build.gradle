@@ -124,7 +124,7 @@ tasks.named('processTestResources') {
 check.dependsOn transferIntegrationTest
 
 contracts {
-    baseClassForTests = 'io.github.habatoo.controllers.BaseContractTest'
+    baseClassForTests = 'io.github.habatoo.controllers.BaseTransferContractTest'
     testMode = 'WEBTESTCLIENT'
     contractsDslDir = file("$projectDir/src/test/resources/contracts")
 }

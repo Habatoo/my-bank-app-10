@@ -3,14 +3,15 @@ package contracts
 import org.springframework.cloud.contract.spec.Contract
 
 Contract.make {
-    description "Ошибка списания средств у отправителя возвращает success=false"
+    description "Успешный перевод от пользователя senderUser к получателю targetUser"
 
     request {
         method 'POST'
         urlPath('/transfer') {
             queryParameters {
-                parameter 'value', '1000.00'
+                parameter 'value', '100.00'
                 parameter 'account', 'targetUser'
+                parameter 'currency', 'RUB'
             }
         }
         headers {
@@ -22,11 +23,16 @@ Contract.make {
     response {
         status 200
         headers {
-            contentType('application/json')
+            contentType(applicationJson())
         }
         body(
-                success: false,
-                message: "Ошибка списания: Недостаточно средств"
+                success: true,
+                message: "Перевод успешно выполнен",
+                data: [
+                        login: 'targetUser',
+                        value: 100.00,
+                        currency: 'RUB'
+                ]
         )
     }
 }

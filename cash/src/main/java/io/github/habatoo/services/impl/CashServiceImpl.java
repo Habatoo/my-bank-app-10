@@ -3,6 +3,7 @@ package io.github.habatoo.services.impl;
 import io.github.habatoo.dto.CashDto;
 import io.github.habatoo.dto.NotificationEvent;
 import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.dto.enums.EventStatus;
 import io.github.habatoo.dto.enums.EventType;
 import io.github.habatoo.dto.enums.OperationType;
@@ -16,6 +17,7 @@ import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOper
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -23,6 +25,7 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * {@inheritDoc}
@@ -41,143 +44,109 @@ public class CashServiceImpl implements CashService {
      * {@inheritDoc}
      */
     @Override
-    public Mono<OperationResultDto<CashDto>> processCashOperation(String login, CashDto cashDto) {
-        BigDecimal amountChange = calculateAmountChange(cashDto);
-        String currency = cashDto.getCurrency().name();
+    public Mono<OperationResultDto<CashDto>> processCashOperation(
+            BigDecimal value,
+            String action,
+            String currency,
+            Jwt jwt) {
 
-        return updateAccountBalance(login, amountChange, currency)
-                .flatMap(cashRes -> {
-                    if (!cashRes.isSuccess()) {
-                        return Mono.just(handleAccountError(cashRes));
+        String login = jwt.getClaimAsString("preferred_username");
+        String userId = jwt.getSubject();
+
+        return Mono.zip(parseOperationType(action), parseCurrency(currency))
+                .flatMap(tuple -> {
+                    OperationType opType = tuple.getT1();
+                    Currency cur = tuple.getT2();
+
+                    if (value == null || value.compareTo(BigDecimal.ZERO) <= 0) {
+                        return Mono.error(new IllegalArgumentException("Сумма должна быть положительной"));
                     }
-                    return completeCashOperation(login, cashDto, amountChange, currency);
-                });
-    }
 
-    /**
-     * Завершение операции: сохранение в локальную БД и фиксация события в Outbox.
-     * В случае ошибки БД запускается компенсация во внешнем сервисе.
-     */
-    private Mono<OperationResultDto<CashDto>> completeCashOperation(
-            String login,
-            CashDto cashDto,
-            BigDecimal amountChange,
-            String currency) {
-        Cash operation = buildCashEntity(login, cashDto);
+                    CashDto dto = CashDto.builder()
+                            .userId(UUID.fromString(userId))
+                            .value(value)
+                            .action(opType)
+                            .currency(cur)
+                            .createdAt(LocalDateTime.now())
+                            .build();
 
-        return operationsRepository.save(operation)
-                .then(saveNotification(login, cashDto, EventStatus.SUCCESS))
-                .thenReturn(buildSuccessResponse(cashDto))
+                    BigDecimal delta = (opType == OperationType.PUT) ? value : value.negate();
+                    return executeTransaction(login, dto, delta);
+                })
                 .onErrorResume(e -> {
-                    log.error("ОШИБКА БД в CashService для {}. Запуск компенсации...", login);
-                    return compensateAccountUpdate(login, amountChange, currency)
-                            .then(saveNotification(login, cashDto, EventStatus.FAILURE))
-                            .then(Mono.just(buildDatabaseErrorResponse(cashDto)));
+                    log.error("Ошибка валидации параметров для {}: {}", login, e.getMessage());
+                    return Mono.just(errorResponse(e.getMessage()));
                 });
     }
 
-    private Mono<Void> compensateAccountUpdate(
-            String login,
-            BigDecimal originalAmountChange,
-            String currency) {
-        BigDecimal compensationAmount = originalAmountChange.negate();
-        log.info("Компенсация: Возврат суммы {} для пользователя {}", compensationAmount, login);
+    private Mono<Currency> parseCurrency(String curStr) {
+        return Mono.fromCallable(() -> Currency.valueOf(curStr.toUpperCase()))
+                .onErrorMap(e -> new IllegalArgumentException("Неподдерживаемая валюта: " + curStr));
+    }
 
-        return updateAccountBalance(login, compensationAmount, currency)
-                .flatMap(res -> {
-                    if (!res.isSuccess()) {
-                        log.error("ФАТАЛЬНАЯ ОШИБКА: Не удалось компенсировать баланс для {}", login);
-                    }
-                    return Mono.empty();
+    private Mono<OperationType> parseOperationType(String oprStr) {
+        return Mono.fromCallable(() -> OperationType.valueOf(oprStr.toUpperCase()))
+                .onErrorMap(e -> new IllegalArgumentException("Неподдерживаемый тип операции: " + oprStr));
+    }
+
+    private Mono<OperationResultDto<CashDto>> executeTransaction(String login, CashDto dto, BigDecimal delta) {
+        return callAccountService(login, delta, dto.getCurrency().name())
+                .flatMap(res -> res.isSuccess()
+                        ? saveAndNotify(login, dto, delta)
+                        : Mono.just(errorResponse(res.getMessage())));
+    }
+
+    private Mono<OperationResultDto<CashDto>> saveAndNotify(String login, CashDto dto, BigDecimal delta) {
+        return operationsRepository.save(mapToEntity(login, dto))
+                .then(sendNotification(login, dto, EventStatus.SUCCESS))
+                .thenReturn(successResponse(dto))
+                .onErrorResume(e -> {
+                    log.error("DB Error. Starting compensation for {}: {}", login, e.getMessage());
+                    return callAccountService(login, delta.negate(), dto.getCurrency().name())
+                            .then(sendNotification(login, dto, EventStatus.FAILURE))
+                            .thenReturn(errorResponse("Сбой сохранения в БД. Средства возвращены на счет."));
                 });
     }
 
-    private Mono<Void> saveNotification(String login, CashDto dto, EventStatus status) {
-        NotificationEvent event = buildNotificationEvent(login, dto, status);
-        return outboxClientService.saveEvent(event);
-    }
-
-    private NotificationEvent buildNotificationEvent(String login, CashDto dto, EventStatus status) {
-        boolean isDeposit = dto.getAction() == OperationType.PUT;
-        String actionName = isDeposit ? "Внесение" : "Снятие";
-
-        String message = getMessage(dto, status, actionName);
-
-        return NotificationEvent.builder()
-                .username(login)
-                .eventType(isDeposit ? EventType.DEPOSIT : EventType.WITHDRAW)
-                .status(status)
-                .message(message)
-                .sourceService("cash-service")
-                .payload(Map.of(
-                        "amount", dto.getValue(),
-                        "currency", dto.getCurrency().name(),
-                        "operationType", actionName
-                ))
-                .build();
-    }
-
-    private String getMessage(CashDto dto, EventStatus status, String actionName) {
-        return (status == EventStatus.SUCCESS)
-                ? String.format("%s наличных на сумму %.2f руб. завершено успешно.", actionName, dto.getValue())
-                : String.format("Ошибка при %s наличных. Средства возвращены на счет.", actionName.toLowerCase());
-    }
-
-    private BigDecimal calculateAmountChange(CashDto cashDto) {
-        return cashDto.getAction() == OperationType.PUT
-                ? cashDto.getValue()
-                : cashDto.getValue().negate();
-    }
-
-    private Mono<OperationResultDto<Void>> updateAccountBalance(String login, BigDecimal amount, String currency) {
-        CircuitBreaker cb = registry.circuitBreaker("cash-service-cb");
-
+    private Mono<OperationResultDto<Void>> callAccountService(String login, BigDecimal amt, String cur) {
+        CircuitBreaker cb = registry.circuitBreaker("cashServiceCB");
         return webClient.post()
-                .uri(uriBuilder -> uriBuilder
-                        .host("gateway")
+                .uri(u -> u.host("gateway")
                         .path("/api/account/balance")
                         .queryParam("login", login)
-                        .queryParam("amount", amount)
-                        .queryParam("currency", currency)
-                        .build())
+                        .queryParam("amount", amt)
+                        .queryParam("currency", cur).build())
                 .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<OperationResultDto<Void>>() {
-                })
+                .bodyToMono(new ParameterizedTypeReference<OperationResultDto<Void>>() {})
                 .transformDeferred(CircuitBreakerOperator.of(cb));
     }
 
-    private Cash buildCashEntity(String login, CashDto cashDto) {
+    private Mono<Void> sendNotification(String login, CashDto dto, EventStatus status) {
+        String actionName = dto.getAction() == OperationType.PUT ? "Внесение" : "Снятие";
+        String msg = (status == EventStatus.SUCCESS)
+                ? String.format("%s %.2f %s выполнено успешно", actionName, dto.getValue(), dto.getCurrency())
+                : "Ошибка сохранения транзакции. Баланс восстановлен.";
+
+        return outboxClientService.saveEvent(NotificationEvent.builder()
+                .username(login).status(status).message(msg).sourceService("cash-service")
+                .eventType(dto.getAction() == OperationType.PUT ? EventType.DEPOSIT : EventType.WITHDRAW).build());
+    }
+
+    private Cash mapToEntity(String login, CashDto dto) {
         return Cash.builder()
                 .username(login)
-                .amount(cashDto.getValue())
-                .currency(cashDto.getCurrency())
-                .operationType(cashDto.getAction())
+                .amount(dto.getValue())
+                .currency(dto.getCurrency())
+                .operationType(dto.getAction())
                 .createdAt(LocalDateTime.now())
-                .accountId(cashDto.getAccountId())
                 .build();
     }
 
-    private OperationResultDto<CashDto> handleAccountError(OperationResultDto<Void> result) {
-        return OperationResultDto.<CashDto>builder()
-                .success(false)
-                .message(result.getMessage())
-                .errorCode(result.getErrorCode())
-                .build();
+    private OperationResultDto<CashDto> successResponse(CashDto dto) {
+        return OperationResultDto.<CashDto>builder().success(true).data(dto).message("Успешно").build();
     }
 
-    private OperationResultDto<CashDto> buildSuccessResponse(CashDto cashDto) {
-        return OperationResultDto.<CashDto>builder()
-                .success(true)
-                .data(cashDto)
-                .message("Операция успешно проведена и сохранена")
-                .build();
-    }
-
-    private OperationResultDto<CashDto> buildDatabaseErrorResponse(CashDto cashDto) {
-        return OperationResultDto.<CashDto>builder()
-                .success(false)
-                .data(cashDto)
-                .message("Ошибка сохранения операции. Средства возвращены на счет.")
-                .build();
+    private OperationResultDto<CashDto> errorResponse(String msg) {
+        return OperationResultDto.<CashDto>builder().success(false).message(msg).build();
     }
 }

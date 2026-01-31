@@ -1,20 +1,20 @@
 package io.github.habatoo.dto;
 
-import io.github.habatoo.dto.enums.Currency;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TransferDto {
+public class UserProfileResponseDto {
     private String login;
-    private BigDecimal value;
-    private Currency fromCurrency;
-    private Currency toCurrency;
+    private String name;
+    private LocalDate birthDate;
+    private List<AccountDto> accounts;
 }

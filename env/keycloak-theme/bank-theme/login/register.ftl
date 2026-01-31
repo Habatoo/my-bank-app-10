@@ -64,12 +64,6 @@
             <input type="password" class="form-control" name="password-confirm" id="password-confirm" placeholder="••••••••" required>
         </div>
 
-        <#-- Баланс как кастомный атрибут. В DTO 'balance' -->
-        <div class="mb-4">
-            <label class="form-label small">Начальный баланс, ₽</label>
-            <input type="number" class="form-control" name="user.attributes.initialSum" id="initialSum" value="${(register.formData['user.attributes.initialSum']!'0')}" min="0">
-        </div>
-
         <button type="submit" class="btn btn-primary btn-auth w-100">Создать аккаунт</button>
     </form>
 </div>

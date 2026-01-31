@@ -11,7 +11,7 @@ Contract.make {
             queryParameters {
                 parameter 'value', '0'
                 parameter 'account', 'targetUser'
-            }
+                parameter 'currency', 'RUB'            }
         }
         headers {
             contentType('application/x-www-form-urlencoded')

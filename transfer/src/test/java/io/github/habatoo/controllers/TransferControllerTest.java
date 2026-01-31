@@ -29,6 +29,8 @@ import static org.mockito.Mockito.*;
 @DisplayName("Тестирование контроллера переводов (TransferController)")
 class TransferControllerTest {
 
+    private final String RUB = "RUB";
+
     @Mock
     private TransferService transferService;
 
@@ -66,7 +68,7 @@ class TransferControllerTest {
         when(transferService.processTransferOperation(eq("sender_user"), any(TransferDto.class)))
                 .thenReturn(Mono.just(successResult));
 
-        Mono<OperationResultDto<TransferDto>> result = transferController.updateBalance(value, targetAccount, jwt);
+        Mono<OperationResultDto<TransferDto>> result = transferController.updateBalance(value, targetAccount, RUB, jwt);
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> res.isSuccess()
@@ -85,7 +87,7 @@ class TransferControllerTest {
         BigDecimal invalidValue = new BigDecimal("-10.00");
         String targetAccount = "recipient_user";
 
-        Mono<OperationResultDto<TransferDto>> result = transferController.updateBalance(invalidValue, targetAccount, jwt);
+        Mono<OperationResultDto<TransferDto>> result = transferController.updateBalance(invalidValue, targetAccount, RUB, jwt);
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> !res.isSuccess()
@@ -103,7 +105,7 @@ class TransferControllerTest {
     void shouldReturnErrorWhenValueIsNullTest() {
         String targetAccount = "recipient_user";
 
-        Mono<OperationResultDto<TransferDto>> result = transferController.updateBalance(null, targetAccount, jwt);
+        Mono<OperationResultDto<TransferDto>> result = transferController.updateBalance(null, targetAccount, RUB, jwt);
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> !res.isSuccess()

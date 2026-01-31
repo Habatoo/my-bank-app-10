@@ -123,4 +123,26 @@ class AccountControllerTest {
                 .expectNextMatches(res -> !res.isSuccess() && res.getMessage().equals("Пользователь не найден"))
                 .verifyComplete();
     }
+
+    @Test
+    @DisplayName("Открытие счета: успешный сценарий")
+    void openAccountSuccessTest() {
+        String login = "user1";
+        String currency = "USD";
+        OperationResultDto<Void> successResult = OperationResultDto.<Void>builder()
+                .success(true)
+                .message("Счет открыт")
+                .build();
+
+        when(accountService.openAccount(login, currency))
+                .thenReturn(Mono.just(successResult));
+
+        Mono<OperationResultDto<Void>> result = accountController.openAccount(jwt, currency);
+
+        StepVerifier.create(result)
+                .expectNextMatches(res -> res.isSuccess() && "Счет открыт" .equals(res.getMessage()))
+                .verifyComplete();
+
+        verify(accountService).openAccount(login, currency);
+    }
 }

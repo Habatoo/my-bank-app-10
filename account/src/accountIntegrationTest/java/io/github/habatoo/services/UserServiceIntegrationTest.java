@@ -49,7 +49,6 @@ class UserServiceIntegrationTest extends BaseAccountTest {
                 .assertNext(dto -> {
                     assertThat(dto.getLogin()).isEqualTo("new_user");
                     assertThat(dto.getName()).isEqualTo("John Doe");
-                    assertThat(dto.getBalance()).isEqualByComparingTo("500.00");
                 })
                 .verifyComplete();
 
@@ -99,7 +98,6 @@ class UserServiceIntegrationTest extends BaseAccountTest {
         StepVerifier.create(setup.then(userService.getOrCreateUser(jwt)))
                 .assertNext(dto -> {
                     assertThat(dto.getLogin()).isEqualTo(login);
-                    assertThat(dto.getBalance()).isEqualByComparingTo("10.00");
                 })
                 .verifyComplete();
 

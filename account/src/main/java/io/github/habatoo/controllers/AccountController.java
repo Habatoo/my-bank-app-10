@@ -41,7 +41,7 @@ public class AccountController {
      * @return поток {@link Flux} с краткими данными аккаунтов {@link AccountShortDto}.
      */
     @GetMapping("/users")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN') or hasRole('ACCOUNT_ACCESS')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'ACCOUNT_ACCESS')")
     public Flux<AccountShortDto> getList(@AuthenticationPrincipal Jwt jwt) {
         String username = jwt.getClaimAsString("preferred_username");
         log.debug("Запрос списка аккаунтов от пользователя: {}", username);
@@ -60,7 +60,7 @@ public class AccountController {
      * @return результат операции {@link OperationResultDto} в виде реактивного объекта {@link Mono}.
      */
     @PostMapping("/balance")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('ACCOUNT_ACCESS')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ACCOUNT_ACCESS')")
     public Mono<OperationResultDto<Void>> updateBalanceInternal(
             @RequestParam String login,
             @RequestParam BigDecimal amount,
@@ -68,5 +68,23 @@ public class AccountController {
 
         log.info("Запрос на изменение баланса для пользователя {}: {}", login, amount);
         return accountService.changeBalance(login, amount, currency);
+    }
+
+    /**
+     * Метод для открытия нового счета пользователя.
+     * <p>
+     *
+     * @param currency валюта счета.
+     * @return результат операции {@link OperationResultDto} в виде реактивного объекта {@link Mono}.
+     */
+    @PostMapping("/open-account")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'ACCOUNT_ACCESS')")
+    public Mono<OperationResultDto<Void>> openAccount(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam String currency) {
+
+        String login = jwt.getClaimAsString("preferred_username");
+        log.info("Открытие счета для {}: {}", login, currency);
+        return accountService.openAccount(login, currency);
     }
 }

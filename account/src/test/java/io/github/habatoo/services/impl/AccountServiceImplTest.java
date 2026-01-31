@@ -20,6 +20,7 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -134,7 +135,7 @@ class AccountServiceImplTest {
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> !res.isSuccess()
-                        && "INSUFFICIENT_FUNDS".equals(res.getErrorCode()))
+                        && "INSUFFICIENT_FUNDS" .equals(res.getErrorCode()))
                 .verifyComplete();
 
         verify(accountRepository, never()).save(any());
@@ -154,7 +155,116 @@ class AccountServiceImplTest {
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> !res.isSuccess()
-                        && "ACCOUNT_NOT_FOUND".equals(res.getErrorCode()))
+                        && "ACCOUNT_NOT_FOUND" .equals(res.getErrorCode()))
                 .verifyComplete();
+    }
+
+    /**
+     * Проверка сценария успешного открытия нового счета в допустимой валюте.
+     */
+    @Test
+    @DisplayName("Открытие счета: успех")
+    void openAccountSuccessTest() {
+        String login = "test_user";
+        String currencyStr = "USD";
+        UUID userId = UUID.randomUUID();
+        User user = User.builder().id(userId).login(login).build();
+
+        when(userRepository.findByLogin(login)).thenReturn(Mono.just(user));
+        when(accountRepository.findByUserIdAndCurrency(userId, Currency.USD)).thenReturn(Mono.empty());
+        when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+        when(outboxClientService.saveEvent(any())).thenReturn(Mono.empty());
+
+        Mono<OperationResultDto<Void>> result = accountService.openAccount(login, currencyStr);
+
+        StepVerifier.create(result)
+                .expectNextMatches(res -> res.isSuccess() && res.getMessage().contains("успешно открыт"))
+                .verifyComplete();
+    }
+
+    /**
+     * Проверка ошибки при попытке открыть счет в валюте, которой нет в Enum Currency.
+     */
+    @Test
+    @DisplayName("Открытие счета: ошибка при неверном формате валюты")
+    void openAccountInvalidFormatTest() {
+        String login = "user";
+        String invalidCurrency = "INVALID_VAL";
+
+        Mono<OperationResultDto<Void>> result = accountService.openAccount(login, invalidCurrency);
+
+        StepVerifier.create(result)
+                .expectErrorMatches(e -> e instanceof IllegalArgumentException
+                        && e.getMessage().contains("Неверный формат валюты"))
+                .verify();
+    }
+
+    /**
+     * Проверка ошибки, если указанный логин пользователя не существует в базе данных.
+     */
+    @Test
+    @DisplayName("Открытие счета: ошибка, если пользователь не найден")
+    void openAccountUserNotFoundTest() {
+        String login = "missing_user";
+        String currencyStr = "RUB";
+
+        when(userRepository.findByLogin(login)).thenReturn(Mono.empty());
+
+        Mono<OperationResultDto<Void>> result = accountService.openAccount(login, currencyStr);
+
+        StepVerifier.create(result)
+                .expectErrorMatches(e -> e instanceof NoSuchElementException
+                        && e.getMessage().contains("не найден"))
+                .verify();
+    }
+
+    /**
+     * Проверка бизнес-ограничения: нельзя открыть второй счет в той же валюте для одного пользователя.
+     */
+    /**
+     * Проверка бизнес-ограничения: нельзя открыть второй счет в той же валюте для одного пользователя.
+     */
+    @Test
+    @DisplayName("Открытие счета: ошибка, если счет в этой валюте уже существует")
+    void openAccountAlreadyExistsTest() {
+        String login = "user";
+        String currencyStr = "CNY";
+        UUID userId = UUID.randomUUID();
+        User user = User.builder().id(userId).login(login).build();
+
+        Account existingAccount = Account.builder()
+                .userId(userId)
+                .currency(Currency.CNY)
+                .balance(BigDecimal.ZERO)
+                .build();
+
+        when(userRepository.findByLogin(login)).thenReturn(Mono.just(user));
+        when(accountRepository.findByUserIdAndCurrency(userId, Currency.CNY)).thenReturn(Mono.just(existingAccount));
+        lenient().when(accountRepository.save(any(Account.class))).thenReturn(Mono.empty());
+        lenient().when(outboxClientService.saveEvent(any())).thenReturn(Mono.empty());
+
+        Mono<OperationResultDto<Void>> result = accountService.openAccount(login, currencyStr);
+
+        StepVerifier.create(result)
+                .expectNextMatches(res -> !res.isSuccess()
+                        && "ACCOUNT_EXISTS" .equals(res.getErrorCode()))
+                .verifyComplete();
+    }
+
+    /**
+     * Проверка обработки ситуации, когда передана пустая строка валюты.
+     */
+    @Test
+    @DisplayName("Открытие счета: ошибка при пустой строке валюты")
+    void openAccountEmptyCurrencyTest() {
+        String login = "user";
+        String currencyStr = "";
+
+        Mono<OperationResultDto<Void>> result = accountService.openAccount(login, currencyStr);
+
+        StepVerifier.create(result)
+                .expectErrorMatches(throwable -> throwable instanceof IllegalArgumentException &&
+                        throwable.getMessage().equals("Неверный формат валюты: "))
+                .verify();
     }
 }

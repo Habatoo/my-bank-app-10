@@ -55,13 +55,6 @@ public class Cash {
     private Currency currency;
 
     /**
-     * Идентификатор счета, которому принадлежит данная операция.
-     * Соответствует колонке {@code account_id} в базе данных.
-     */
-    @Column("account_id")
-    private UUID accountId;
-
-    /**
      * Тип финансовой операции.
      * Определяет характер движения денежных средств (например, DEPOSIT или WITHDRAW).
      */

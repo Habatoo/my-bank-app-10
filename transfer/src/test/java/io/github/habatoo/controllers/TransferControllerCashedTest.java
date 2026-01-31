@@ -3,6 +3,7 @@ package io.github.habatoo.controllers;
 import io.github.habatoo.configurations.SecurityChassisAutoConfiguration;
 import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.dto.TransferDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.services.TransferService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,10 +64,12 @@ class TransferControllerCashedTest {
     void transferMoneySuccess() {
         BigDecimal amount = new BigDecimal("100.00");
         String targetAccount = "ivan_ivanov";
+        String RUB = "RUB";
 
         TransferDto resultDto = TransferDto.builder()
                 .login(targetAccount)
                 .value(amount)
+                .currency(Currency.RUB)
                 .build();
 
         OperationResultDto<TransferDto> serviceResponse = OperationResultDto.<TransferDto>builder()
@@ -88,6 +91,7 @@ class TransferControllerCashedTest {
                         .path("/transfer")
                         .queryParam("value", amount)
                         .queryParam("account", targetAccount)
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isOk()
@@ -112,6 +116,7 @@ class TransferControllerCashedTest {
                         .path("/transfer")
                         .queryParam("value", 100)
                         .queryParam("account", "any")
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isForbidden();
@@ -133,6 +138,7 @@ class TransferControllerCashedTest {
                         .path("/transfer")
                         .queryParam("value", -50)
                         .queryParam("account", "target")
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isOk()

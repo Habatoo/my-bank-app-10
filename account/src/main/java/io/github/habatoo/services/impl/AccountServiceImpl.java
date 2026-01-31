@@ -8,6 +8,7 @@ import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.dto.enums.EventStatus;
 import io.github.habatoo.dto.enums.EventType;
 import io.github.habatoo.models.Account;
+import io.github.habatoo.models.User;
 import io.github.habatoo.repositories.AccountRepository;
 import io.github.habatoo.repositories.UserRepository;
 import io.github.habatoo.services.AccountService;
@@ -20,7 +21,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * {@inheritDoc}
@@ -38,16 +41,14 @@ public class AccountServiceImpl implements AccountService {
      * {@inheritDoc}
      */
     @Override
-    public Mono<AccountFullResponseDto> getByLogin(String login, String currency) {
-        return userRepository.findByLogin(login)
-                .flatMap(user -> accountRepository.findByUserIdAndCurrency(user.getId(), Currency.valueOf(currency))
-                        .map(acc -> AccountFullResponseDto.builder()
-                                .login(user.getLogin())
-                                .name(user.getName())
-                                .birthDate(user.getBirthDate())
-                                .balance(acc.getBalance())
-                                .currency(acc.getCurrency())
-                                .build()));
+    public Mono<AccountFullResponseDto> getByLogin(String login, String currencyStr) {
+        return parseCurrency(currencyStr)
+                .flatMap(currency -> findUserByLogin(login)
+                        .flatMap(user -> accountRepository.findByUserIdAndCurrency(user.getId(), currency)
+                                .map(acc -> mapToFullResponse(user, acc))
+                        )
+                )
+                .switchIfEmpty(Mono.error(new NoSuchElementException("Счет не найден для указанной валюты")));
     }
 
     /**
@@ -56,7 +57,13 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public Flux<AccountShortDto> getOtherAccounts(String currentLogin) {
         return userRepository.findAllByLoginNot(currentLogin)
-                .map(u -> new AccountShortDto(u.getLogin(), u.getName(), Currency.RUB)); //TODO
+                .flatMap(user -> accountRepository.findAllByUserId(user.getId())
+                        .map(acc -> AccountShortDto.builder()
+                                .login(user.getLogin())
+                                .name(user.getName())
+                                .currency(acc.getCurrency())
+                                .build())
+                );
     }
 
     /**
@@ -64,62 +71,90 @@ public class AccountServiceImpl implements AccountService {
      */
     @Override
     @Transactional
-    public Mono<OperationResultDto<Void>> changeBalance(String login, BigDecimal delta, String currency) {
+    public Mono<OperationResultDto<Void>> changeBalance(String login, BigDecimal delta, String currencyStr) {
+        return parseCurrency(currencyStr)
+                .flatMap(currency -> findUserByLogin(login)
+                        .flatMap(user -> accountRepository.findByUserIdAndCurrency(user.getId(), currency)))
+                .flatMap(account -> {
+                    BigDecimal newBalance = account.getBalance().add(delta);
+                    if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
+                        return Mono.just(createErrorResponse("INSUFFICIENT_FUNDS", "Недостаточно средств"));
+                    }
+                    return updateAccountBalance(account, login, delta, newBalance);
+                })
+                .switchIfEmpty(Mono.just(createErrorResponse("ACCOUNT_NOT_FOUND", "Счет не найден")))
+                .onErrorResume(e -> Mono.just(createErrorResponse("VALIDATION_ERROR", e.getMessage())));
+    }
+
+    @Override
+    @Transactional
+    public Mono<OperationResultDto<Void>> openAccount(String login, String currencyStr) {
+        return parseCurrency(currencyStr)
+                .flatMap(currency -> findUserByLogin(login)
+                        .flatMap(user -> accountRepository.findByUserIdAndCurrency(user.getId(), currency)
+                                .flatMap(exists -> Mono.just(createErrorResponse("ACCOUNT_EXISTS", "Счет уже открыт")))
+                                .switchIfEmpty(createNewAccount(user, currency))))
+                .onErrorResume(e -> Mono.just(createErrorResponse("ERROR", e.getMessage())));
+    }
+
+    private Mono<Currency> parseCurrency(String curStr) {
+        return Mono.fromCallable(() -> Currency.valueOf(curStr.toUpperCase()))
+                .onErrorMap(e -> new IllegalArgumentException("Неподдерживаемая валюта: " + curStr));
+    }
+
+    private Mono<User> findUserByLogin(String login) {
         return userRepository.findByLogin(login)
-                .flatMap(user -> accountRepository.findByUserIdAndCurrency(user.getId(), Currency.valueOf(currency)))
-                .flatMap(account -> processBalanceChange(account, login, delta))
-                .switchIfEmpty(Mono.just(createErrorResponse("ACCOUNT_NOT_FOUND", "Счет не найден")));
+                .switchIfEmpty(Mono.error(new NoSuchElementException("Пользователь не найден: " + login)));
     }
 
-    /**
-     * Логика проверки и запуска процесса обновления баланса.
-     */
-    private Mono<OperationResultDto<Void>> processBalanceChange(Account account, String login, BigDecimal delta) {
-        BigDecimal newBalance = account.getBalance().add(delta);
-        if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
-            return Mono.just(createErrorResponse("INSUFFICIENT_FUNDS", "Недостаточно средств"));
-        }
-        return updateAccountAndLogEvent(account, login, delta, newBalance);
-    }
-
-    private Mono<OperationResultDto<Void>> updateAccountAndLogEvent(
-            Account account, String login, BigDecimal delta, BigDecimal newBalance) {
-
-        account.setBalance(newBalance);
-        NotificationEvent event = getNotificationEvent(login, delta, newBalance);
+    private Mono<OperationResultDto<Void>> createNewAccount(User user, Currency currency) {
+        Account account = Account.builder()
+                .userId(user.getId())
+                .balance(BigDecimal.ZERO)
+                .currency(currency)
+                .createdAt(LocalDateTime.now())
+                .build();
 
         return accountRepository.save(account)
-                .then(outboxClientService.saveEvent(event))
-                .thenReturn(buildSuccessResponse());
+                .then(outboxClientService.saveEvent(getCreateAccountNotificationEvent(user, currency)))
+                .thenReturn(buildSuccessResponse("Счет в " + currency + " открыт"));
     }
 
-    private OperationResultDto<Void> buildSuccessResponse() {
-        return OperationResultDto.<Void>builder()
-                .success(true)
-                .message("Баланс обновлен")
-                .build();
+    private Mono<OperationResultDto<Void>> updateAccountBalance(Account acc, String login, BigDecimal delta, BigDecimal newBalance) {
+        acc.setBalance(newBalance);
+        acc.setUpdatedAt(LocalDateTime.now());
+
+        return accountRepository.save(acc)
+                .then(outboxClientService.saveEvent(getNotificationEvent(login, delta, newBalance)))
+                .thenReturn(buildSuccessResponse("Баланс обновлен"));
+    }
+
+    private AccountFullResponseDto mapToFullResponse(User user, Account acc) {
+        return AccountFullResponseDto.builder()
+                .login(user.getLogin()).name(user.getName())
+                .birthDate(user.getBirthDate()).balance(acc.getBalance())
+                .currency(acc.getCurrency()).build();
+    }
+
+    private OperationResultDto<Void> buildSuccessResponse(String msg) {
+        return OperationResultDto.<Void>builder().success(true).message(msg).build();
     }
 
     private OperationResultDto<Void> createErrorResponse(String code, String msg) {
-        return OperationResultDto.<Void>builder()
-                .success(false)
-                .errorCode(code)
-                .message(msg)
-                .build();
+        return OperationResultDto.<Void>builder().success(false).errorCode(code).message(msg).build();
     }
 
-    private NotificationEvent getNotificationEvent(String login, BigDecimal delta, BigDecimal currentBalance) {
-        boolean isDeposit = delta.compareTo(BigDecimal.ZERO) >= 0;
+    private NotificationEvent getCreateAccountNotificationEvent(User user, Currency cur) {
         return NotificationEvent.builder()
-                .username(login)
-                .eventType(isDeposit ? EventType.DEPOSIT : EventType.WITHDRAW)
-                .status(EventStatus.SUCCESS)
-                .message(String.format("Баланс пользователя %s изменен на %s", login, delta))
-                .sourceService("accounts-service")
-                .payload(Map.of(
-                        "amount", delta.abs(),
-                        "totalBalance", currentBalance
-                ))
-                .build();
+                .username(user.getLogin()).eventType(EventType.CREATE_ACCOUNT)
+                .status(EventStatus.SUCCESS).message("Создан счет: " + cur)
+                .payload(Map.of("currency", cur.name())).build();
+    }
+
+    private NotificationEvent getNotificationEvent(String login, BigDecimal delta, BigDecimal balance) {
+        return NotificationEvent.builder()
+                .username(login).eventType(delta.signum() > 0 ? EventType.DEPOSIT : EventType.WITHDRAW)
+                .status(EventStatus.SUCCESS).message("Изменение баланса на " + delta)
+                .payload(Map.of("delta", delta, "balance", balance)).build();
     }
 }

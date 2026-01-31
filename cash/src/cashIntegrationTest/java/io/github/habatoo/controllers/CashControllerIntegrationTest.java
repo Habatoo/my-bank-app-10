@@ -55,11 +55,12 @@ class CashControllerIntegrationTest {
     void depositSuccessTest() {
         String mockLogin = "user_ivan";
         UUID mockUserId = UUID.randomUUID();
+        BigDecimal value = new BigDecimal("1000.00");
 
         CashDto responseDto = CashDto.builder()
                 .userId(mockUserId)
                 .action(OperationType.PUT)
-                .value(new BigDecimal("1000.00"))
+                .value(value)
                 .currency(Currency.RUB)
                 .build();
 
@@ -69,7 +70,7 @@ class CashControllerIntegrationTest {
                 .data(responseDto)
                 .build();
 
-        when(cashService.processCashOperation(eq(mockLogin), any(CashDto.class)))
+        when(cashService.processCashOperation(eq(value), eq(mockLogin), any(CashDto.class)))
                 .thenReturn(Mono.just(result));
 
         webTestClient

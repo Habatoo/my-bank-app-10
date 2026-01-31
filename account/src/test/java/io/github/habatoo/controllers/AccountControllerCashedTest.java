@@ -14,6 +14,7 @@ import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -23,7 +24,7 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt;
 
@@ -149,5 +150,82 @@ class AccountControllerCashedTest {
                 .uri("/users")
                 .exchange()
                 .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    @DisplayName("Успешное открытие счета администратором")
+    @WithMockUser(roles = "ADMIN")
+    void openAccountShouldReturnSuccessWhenUserIsAdminTest() {
+        String login = "testuser";
+        String currency = "USD";
+        OperationResultDto<Void> successResponse = OperationResultDto.<Void>builder()
+                .success(true)
+                .message("Счет успешно открыт")
+                .build();
+
+        when(accountService.openAccount(login, currency))
+                .thenReturn(Mono.just(successResponse));
+
+        webTestClient
+                .mutateWith(csrf())
+                .post()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/account")
+                        .queryParam("login", login)
+                        .queryParam("currency", currency)
+                        .build())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(true)
+                .jsonPath("$.message").isEqualTo("Счет успешно открыт");
+
+        verify(accountService, times(1)).openAccount(login, currency);
+    }
+
+    @Test
+    @DisplayName("Ошибка открытия счета при неверных параметрах")
+    @WithMockUser(roles = "ACCOUNT_ACCESS")
+    void openAccountShouldReturnErrorWhenServiceFailsTest() {
+        OperationResultDto<Void> errorResponse = OperationResultDto.<Void>builder()
+                .success(false)
+                .errorCode("INVALID_CURRENCY")
+                .message("Допустимые валюты: RUB, USD, CNY")
+                .build();
+
+        when(accountService.openAccount(anyString(), anyString()))
+                .thenReturn(Mono.just(errorResponse));
+
+        webTestClient
+                .mutateWith(csrf())
+                .post()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/account")
+                        .queryParam("login", "user")
+                        .queryParam("currency", "EUR")
+                        .build())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(false)
+                .jsonPath("$.errorCode").isEqualTo("INVALID_CURRENCY");
+    }
+
+    @Test
+    @DisplayName("Доступ запрещен для пользователя без нужной роли")
+    @WithMockUser(roles = "USER")
+    void openAccountShouldReturnForbiddenWhenUserHasNoRightsTest() {
+        webTestClient
+                .mutateWith(csrf())
+                .post()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/account")
+                        .queryParam("login", "any")
+                        .queryParam("currency", "RUB")
+                        .build())
+                .exchange()
+                .expectStatus().isForbidden();
+
+        verifyNoInteractions(accountService);
     }
 }

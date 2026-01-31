@@ -3,6 +3,7 @@ package io.github.habatoo.services.impl;
 import io.github.habatoo.dto.NotificationEvent;
 import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.dto.TransferDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.dto.enums.EventStatus;
 import io.github.habatoo.models.Transfer;
 import io.github.habatoo.repositories.TransfersRepository;
@@ -63,6 +64,7 @@ class TransferServiceImplTest {
         transferDto = TransferDto.builder()
                 .login(RECIPIENT)
                 .value(AMOUNT)
+                .currency(Currency.RUB)
                 .build();
 
         CircuitBreaker cb = CircuitBreaker.ofDefaults("transfer-service-cb");
@@ -78,7 +80,7 @@ class TransferServiceImplTest {
         OperationResultDto<Void> successResponse = OperationResultDto.<Void>builder().success(true).build();
         mockWebClientResponse(successResponse);
 
-        when(transfersRepository.save(any(Transfer.class))).thenReturn(Mono.just(new Transfer()));
+        when(transfersRepository.save(any(Transfer.class))).thenReturn(Mono.just(Transfer.builder().currency(Currency.RUB).build()));
         when(outboxClientService.saveEvent(any(NotificationEvent.class))).thenReturn(Mono.empty());
 
         Mono<OperationResultDto<TransferDto>> result = transferService.processTransferOperation(SENDER, transferDto);

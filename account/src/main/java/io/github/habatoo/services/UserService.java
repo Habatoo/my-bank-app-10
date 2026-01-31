@@ -2,6 +2,7 @@ package io.github.habatoo.services;
 
 import io.github.habatoo.dto.AccountFullResponseDto;
 import io.github.habatoo.dto.PasswordUpdateDto;
+import io.github.habatoo.dto.UserProfileResponseDto;
 import io.github.habatoo.dto.UserUpdateDto;
 import org.springframework.security.oauth2.jwt.Jwt;
 import reactor.core.publisher.Mono;
@@ -23,9 +24,9 @@ public interface UserService {
      * </p>
      *
      * @param jwt объект декодированного JWT-токена с данными авторизации.
-     * @return {@link Mono}, содержащий расширенную информацию о профиле {@link AccountFullResponseDto}.
+     * @return {@link Mono}, содержащий расширенную информацию о профиле {@link UserProfileResponseDto}.
      */
-    Mono<AccountFullResponseDto> getOrCreateUser(Jwt jwt);
+    Mono<UserProfileResponseDto> getOrCreateUser(Jwt jwt);
 
     /**
      * Обновляет персональные данные профиля пользователя.

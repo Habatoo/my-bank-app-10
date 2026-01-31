@@ -3,6 +3,7 @@ package io.github.habatoo.services;
 import io.github.habatoo.BaseTransferTest;
 import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.dto.TransferDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.dto.enums.EventStatus;
 import okhttp3.mockwebserver.MockResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +55,7 @@ class TransferServiceIntegrationTest extends BaseTransferTest {
         String sender = "sender_user";
         String recipient = "recipient_user";
         BigDecimal amount = new BigDecimal("500.00");
-        TransferDto dto = new TransferDto(recipient, amount);
+        TransferDto dto = new TransferDto(recipient, amount, Currency.RUB);
 
         OperationResultDto<Void> successResponse = OperationResultDto.<Void>builder().success(true).build();
         String jsonResponse = objectMapper.writeValueAsString(successResponse);
@@ -94,7 +95,7 @@ class TransferServiceIntegrationTest extends BaseTransferTest {
     void processTransferOperation_CompensateScenario() throws Exception {
         String sender = "sender_user";
         BigDecimal amount = new BigDecimal("100.00");
-        TransferDto dto = new TransferDto("recipient", amount);
+        TransferDto dto = new TransferDto("recipient", amount, Currency.RUB);
 
         OperationResultDto<Void> successRes = OperationResultDto.<Void>builder().success(true).build();
         OperationResultDto<Void> failRes = OperationResultDto.<Void>builder().success(false).message("Limit exceeded").build();

@@ -2,6 +2,7 @@ package io.github.habatoo.controllers;
 
 import io.github.habatoo.configurations.SecurityChassisAutoConfiguration;
 import io.github.habatoo.dto.AccountFullResponseDto;
+import io.github.habatoo.dto.UserProfileResponseDto;
 import io.github.habatoo.dto.UserUpdateDto;
 import io.github.habatoo.repositories.AccountRepository;
 import io.github.habatoo.repositories.OutboxRepository;
@@ -24,6 +25,7 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -67,6 +69,11 @@ class UserControllerIntegrationTest {
     @DisplayName("GET /user - Успешное получение профиля")
     void getCurrentUserSuccessTest() {
         String mockUsername = "active_user";
+        UserProfileResponseDto mockDtoUser = new UserProfileResponseDto(
+                mockUsername,
+                "Иван Иванов",
+                LocalDate.now(),
+                List.of());
         AccountFullResponseDto expectedResponse = AccountFullResponseDto.builder()
                 .login(mockUsername)
                 .name("Ivan Ivanov")
@@ -75,7 +82,7 @@ class UserControllerIntegrationTest {
                 .build();
 
         when(userService.getOrCreateUser(any(Jwt.class)))
-                .thenReturn(Mono.just(expectedResponse));
+                .thenReturn(Mono.just(mockDtoUser));
 
         webTestClient
                 .mutateWith(mockJwt()

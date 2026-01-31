@@ -56,4 +56,18 @@ public interface AccountService {
      * содержащим статус успеха и информационное сообщение.
      */
     Mono<OperationResultDto<Void>> changeBalance(String login, BigDecimal delta, String currency);
+
+    /**
+     * Выполняет операцию изменения баланса пользователя.
+     * <p>
+     * Метод позволяет ткрыть счет в разных валютах.
+     * В каждом виде а=валюты можно открыть один счет.
+     * </p>
+     *
+     * @param login    логин пользователя, открывающего счет.
+     * @param currency валюта.
+     * @return {@link Mono} с результатом операции {@link OperationResultDto},
+     * содержащим статус успеха и информационное сообщение.
+     */
+    Mono<OperationResultDto<Void>> openAccount(String login, String currency);
 }

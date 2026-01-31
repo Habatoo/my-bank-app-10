@@ -1,6 +1,7 @@
 package io.github.habatoo.controllers;
 
 import io.github.habatoo.dto.AccountFullResponseDto;
+import io.github.habatoo.dto.UserProfileResponseDto;
 import io.github.habatoo.dto.UserUpdateDto;
 import io.github.habatoo.services.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,7 @@ import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -55,18 +57,15 @@ class UserControllerTest {
     @Test
     @DisplayName("Получение профиля: успех")
     void getCurrentUserShouldReturnProfileTest() {
-        AccountFullResponseDto expectedResponse = AccountFullResponseDto.builder()
-                .login(TEST_USERNAME)
-                .name("Ivan Ivanov")
-                .birthDate(LocalDate.now())
-                .accountId(UUID.randomUUID())
-                .balance(BigDecimal.TEN)
-                .version(1L)
-                .build();
+        UserProfileResponseDto expectedResponse = new UserProfileResponseDto(
+                "user1",
+                "User One",
+                LocalDate.now(),
+                List.of());
 
         when(userService.getOrCreateUser(jwt)).thenReturn(Mono.just(expectedResponse));
 
-        Mono<AccountFullResponseDto> result = userController.getCurrentUser(jwt);
+        Mono<UserProfileResponseDto> result = userController.getCurrentUser(jwt);
 
         StepVerifier.create(result)
                 .expectNext(expectedResponse)

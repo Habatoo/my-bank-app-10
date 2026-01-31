@@ -121,7 +121,7 @@ check.dependsOn accountIntegrationTest
 
 contracts {
     testFramework = 'JUNIT5'
-    baseClassForTests = 'io.github.habatoo.controllers.BaseContractTest'
+    baseClassForTests = 'io.github.habatoo.controllers.BaseAccountContractTest'
     testMode = 'WEBTESTCLIENT'
     contractsDslDir = file("$projectDir/src/test/resources/contracts")
 }

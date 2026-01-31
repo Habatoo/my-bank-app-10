@@ -3,6 +3,7 @@ package io.github.habatoo.controllers;
 import io.github.habatoo.configurations.SecurityChassisAutoConfiguration;
 import io.github.habatoo.dto.CashDto;
 import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.dto.enums.OperationType;
 import io.github.habatoo.services.CashService;
 import org.junit.jupiter.api.DisplayName;
@@ -14,6 +15,7 @@ import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -24,6 +26,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt;
@@ -65,11 +68,14 @@ class CashControllerCashedTest {
         String login = "test_user";
         UUID userId = UUID.randomUUID();
         BigDecimal amount = new BigDecimal("1000.00");
+        String action = "PUT";
+        String currency = "RUB";
 
         CashDto resultDto = CashDto.builder()
                 .userId(userId)
                 .action(OperationType.PUT)
                 .value(amount)
+                .currency(Currency.RUB)
                 .build();
 
         OperationResultDto<CashDto> serviceResponse = OperationResultDto.<CashDto>builder()
@@ -78,7 +84,11 @@ class CashControllerCashedTest {
                 .data(resultDto)
                 .build();
 
-        when(cashService.processCashOperation(eq(login), any(CashDto.class)))
+        when(cashService.processCashOperation(
+                eq(amount),
+                eq(action),
+                eq(currency),
+                any(Jwt.class)))
                 .thenReturn(Mono.just(serviceResponse));
 
         webTestClient
@@ -92,15 +102,19 @@ class CashControllerCashedTest {
                 .uri(uriBuilder -> uriBuilder
                         .path("/cash")
                         .queryParam("value", amount)
-                        .queryParam("action", "PUT")
-                        .queryParam("currency", "RUB")
+                        .queryParam("action", action)
+                        .queryParam("currency", currency)
                         .build())
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(true)
+                .jsonPath("$.message").isEqualTo("Success")
                 .jsonPath("$.data.action").isEqualTo("PUT")
+                .jsonPath("$.data.currency").isEqualTo("RUB")
                 .jsonPath("$.data.value").isEqualTo(1000.00);
+
+        verify(cashService).processCashOperation(eq(amount), eq(action), eq(currency), any(Jwt.class));
     }
 
     /**
