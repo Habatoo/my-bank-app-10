@@ -38,15 +38,6 @@ spring:
                   args:
                     name: accountServiceCB
                     fallbackUri: forward:/fallback/account-unavailable
-            - id: registration-route
-              uri: lb://account
-              predicates:
-                - Path=/api/account/password
-              filters:
-                - name: CircuitBreaker
-                  args:
-                    name: accountServiceCB
-                    fallbackUri: forward:/fallback/account-unavailable
             - id: account-service
               uri: lb://account
               predicates:

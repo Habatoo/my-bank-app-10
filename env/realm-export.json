@@ -15,30 +15,12 @@
   ],
   "roles": {
     "realm": [
-      {
-        "name": "USER",
-        "description": "Пользователь банка"
-      },
-      {
-        "name": "ADMIN",
-        "description": "Администратор"
-      },
-      {
-        "name": "ACCOUNT_ACCESS",
-        "description": "Доступ к сервису аккаунтов"
-      },
-      {
-        "name": "CASH_ACCESS",
-        "description": "Доступ к сервису наличных"
-      },
-      {
-        "name": "TRANSFER_ACCESS",
-        "description": "Доступ к сервису переводов"
-      },
-      {
-        "name": "NOTIFICATION_ACCESS",
-        "description": "Доступ к сервису уведомлений"
-      }
+      { "name": "USER", "description": "Пользователь банка" },
+      { "name": "ADMIN", "description": "Администратор" },
+      { "name": "ACCOUNT_ACCESS", "description": "Доступ к сервису аккаунтов" },
+      { "name": "CASH_ACCESS", "description": "Доступ к сервису наличных" },
+      { "name": "TRANSFER_ACCESS", "description": "Доступ к сервису переводов" },
+      { "name": "NOTIFICATION_ACCESS", "description": "Доступ к сервису уведомлений" }
     ]
   },
   "clients": [
@@ -49,26 +31,14 @@
       "clientAuthenticatorType": "client-secret",
       "secret": "90bd600c-7781-4435-961e-1f5139265f7c",
       "baseUrl": "http://localhost:8081",
-      "redirectUris": [
-        "http://localhost:8081/*",
-        "http://localhost:8081/login/oauth2/code/keycloak"
-      ],
-      "webOrigins": [
-        "+"
-      ],
+      "redirectUris": ["http://localhost:8081/*", "http://localhost:8081/login/oauth2/code/keycloak"],
+      "webOrigins": ["+"],
       "protocol": "openid-connect",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "publicClient": false,
-      "frontchannelLogout": true,
-      "attributes": {
-        "post.logout.redirect.uris": "http://localhost:8081/*",
-        "display.on.consent.screen": "false",
-        "frontchannel.logout.url": "http://localhost:8081/logout",
-        "frontchannel.logout.session.required": "true",
-        "backchannel.logout.session.required": "true",
-        "backchannel.logout.revoke.offline.tokens": "false"
-      },
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": true,
       "protocolMappers": [
         {
           "name": "realm roles",
@@ -84,21 +54,6 @@
           }
         },
         {
-          "name": "initialSum mapper",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-attribute-mapper",
-          "config": {
-            "user.attribute": "initialSum",
-            "claim.name": "initialSum",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "userinfo.token.claim": "true",
-            "jsonType.label": "String",
-            "multivalued": "false",
-            "aggregate.attrs": "true"
-          }
-        },
-        {
           "name": "birthdate mapper",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-usermodel-attribute-mapper",
@@ -108,14 +63,10 @@
             "id.token.claim": "true",
             "access.token.claim": "true",
             "userinfo.token.claim": "true",
-            "jsonType.label": "String",
-            "multivalued": "false",
-            "aggregate.attrs": "true"
+            "jsonType.label": "String"
           }
         }
-      ],
-      "serviceAccountsEnabled": true,
-      "fullScopeAllowed": true
+      ]
     },
     {
       "clientId": "gateway",
@@ -125,14 +76,13 @@
       "secret": "g7777777-8888-9999-aaaa-bbbbccccdddd",
       "standardFlowEnabled": true,
       "serviceAccountsEnabled": true,
-      "publicClient": false,
-      "protocol": "openid-connect",
-      "fullScopeAllowed": true
+      "protocol": "openid-connect"
     },
     {
       "clientId": "account",
       "name": "Account Microservice",
       "enabled": true,
+      "clientAuthenticatorType": "client-secret",
       "secret": "a2977717-36e6-42bc-862d-06927877298c",
       "serviceAccountsEnabled": true,
       "authorizationServicesEnabled": true,
@@ -164,119 +114,85 @@
     }
   ],
   "scopeMappings": [
-    {
-      "client": "front-ui",
-      "roles": [
-        "ACCOUNT_ACCESS",
-        "CASH_ACCESS",
-        "TRANSFER_ACCESS"
-      ]
-    },
-    {
-      "client": "account",
-      "roles": [
-        "NOTIFICATION_ACCESS"
-      ]
-    },
-    {
-      "client": "cash",
-      "roles": [
-        "ACCOUNT_ACCESS",
-        "NOTIFICATION_ACCESS"
-      ]
-    },
-    {
-      "client": "transfer",
-      "roles": [
-        "ACCOUNT_ACCESS",
-        "NOTIFICATION_ACCESS"
-      ]
-    }
+    { "client": "front-ui", "roles": ["ACCOUNT_ACCESS", "CASH_ACCESS", "TRANSFER_ACCESS"] },
+    { "client": "account", "roles": ["NOTIFICATION_ACCESS"] },
+    { "client": "cash", "roles": ["ACCOUNT_ACCESS", "NOTIFICATION_ACCESS"] },
+    { "client": "transfer", "roles": ["ACCOUNT_ACCESS", "NOTIFICATION_ACCESS"] }
   ],
   "users": [
     {
       "username": "user",
       "enabled": true,
       "email": "user@example.com",
-      "firstName": "User",
-      "lastName": "User",
-      "attributes": {
-        "initialSum": [
-          "1000.00"
-        ],
-        "birthdate": [
-          "1990-01-01"
-        ]
-      },
-      "credentials": [
-        {
-          "type": "user",
-          "value": "user",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "USER"
-      ]
+      "credentials": [{ "type": "password", "value": "user", "temporary": false }],
+      "attributes": { "birthdate": ["1990-01-01"] },
+      "realmRoles": ["USER"]
     },
     {
       "username": "customer",
       "enabled": true,
       "email": "customer@example.com",
-      "firstName": "Customer",
-      "lastName": "Customer",
-      "attributes": {
-        "initialSum": [
-          "3000.00"
-        ],
-        "birthdate": [
-          "1982-02-01"
-        ]
-      },
-      "credentials": [
-        {
-          "type": "customer",
-          "value": "customer",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "USER"
-      ]
+      "credentials": [{ "type": "password", "value": "customer", "temporary": false }],
+      "attributes": { "birthdate": ["1982-02-01"] },
+      "realmRoles": ["USER"]
     },
     {
       "username": "service-account-account",
       "enabled": true,
       "serviceAccountClientId": "account",
-      "realmRoles": [
-        "NOTIFICATION_ACCESS"
-      ]
+      "realmRoles": ["NOTIFICATION_ACCESS"],
+      "clientRoles": {
+        "realm-management": ["manage-users", "query-users", "view-users"]
+      }
     },
     {
       "username": "service-account-cash",
       "enabled": true,
       "serviceAccountClientId": "cash",
-      "realmRoles": [
-        "ACCOUNT_ACCESS",
-        "NOTIFICATION_ACCESS"
-      ]
+      "realmRoles": ["ACCOUNT_ACCESS", "NOTIFICATION_ACCESS"]
     },
     {
       "username": "service-account-transfer",
       "enabled": true,
       "serviceAccountClientId": "transfer",
-      "realmRoles": [
-        "ACCOUNT_ACCESS",
-        "NOTIFICATION_ACCESS"
-      ]
+      "realmRoles": ["ACCOUNT_ACCESS", "NOTIFICATION_ACCESS"]
     }
   ],
-  "browserFlow": "browser",
-  "registrationFlow": "registration",
+  "requiredActions": [
+    {
+      "alias": "CONFIGURE_TOTP",
+      "name": "Configure OTP",
+      "providerId": "CONFIGURE_TOTP",
+      "enabled": true,
+      "defaultAction": false
+    },
+    {
+      "alias": "UPDATE_PASSWORD",
+      "name": "Update Password",
+      "providerId": "UPDATE_PASSWORD",
+      "enabled": true,
+      "defaultAction": false
+    },
+    {
+      "alias": "UPDATE_PROFILE",
+      "name": "Update Profile",
+      "providerId": "UPDATE_PROFILE",
+      "enabled": false,
+      "defaultAction": false
+    },
+    {
+      "alias": "VERIFY_EMAIL",
+      "name": "Verify Email",
+      "providerId": "VERIFY_EMAIL",
+      "enabled": true,
+      "defaultAction": false
+    }
+  ],
+  "internationalizationEnabled": true,
+  "supportedLocales": [ "ru", "en" ],
+  "defaultLocale": "ru",
   "attributes": {
     "userProfileEnabled": "true",
-    "userProfileConfig": "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"birthdate\",\"displayName\":\"Дата рождения\",\"validations\":{\"not-empty\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"annotations\":{\"inputType\":\"date\"}},{\"name\":\"initialSum\",\"displayName\":\"Начальная сумма\",\"validations\":{\"not-empty\":{},\"double\":{\"min\":0.0}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"annotations\":{\"inputType\":\"number\"}}],\"groups\":[],\"unmanagedAttributePolicy\":\"ENABLED\"}",
-    "realm_client": "false",
-    "post.logout.redirect.uris": "+"
+    "userProfileConfig": "{\"attributes\":[{\"name\":\"username\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"email\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"birthdate\",\"displayName\":\"Дата рождения\",\"validations\":{\"not-empty\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"annotations\":{\"inputType\":\"date\"}}],\"groups\":[],\"unmanagedAttributePolicy\":\"ENABLED\"}"
   }
 }

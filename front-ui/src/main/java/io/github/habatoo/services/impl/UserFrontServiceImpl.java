@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.result.view.RedirectView;
 import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebSession;
 import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Mono;
 
@@ -61,7 +62,7 @@ public class UserFrontServiceImpl implements UserFrontService {
                     String password = formData.getFirst("password");
                     String confirm = formData.getFirst("confirmPassword");
 
-                    if (password == null || !password.equals(confirm)) {
+                    if (password == null || password.isEmpty() || !password.equals(confirm)) {
                         return Mono.just(errorRedirect("Пароли не совпадают"));
                     }
 
@@ -69,13 +70,13 @@ public class UserFrontServiceImpl implements UserFrontService {
                             .uri(BASE_URL + "/account/password")
                             .bodyValue(new PasswordUpdateDto(password, confirm))
                             .retrieve()
-                            .bodyToMono(new ParameterizedTypeReference<OperationResultDto<Void>>() {
-                            })
+                            .bodyToMono(Boolean.class)
                             .transformDeferred(CircuitBreakerOperator.of(registry.circuitBreaker("gateway-cb")))
-                            .map(res -> res.isSuccess()
-                                    ? infoRedirect("Пароль изменен")
-                                    : errorRedirect(res.getMessage()))
-                            .onErrorResume(e -> Mono.just(errorRedirect("Сервис безопасности недоступен")));
+                            .flatMap(success -> getRedirectView(exchange, success))
+                            .onErrorResume(e -> {
+                                log.error("Ошибка при смене пароля: {}", e.getMessage());
+                                return Mono.just(errorRedirect("Сервис безопасности недоступен"));
+                            });
                 });
     }
 
@@ -99,6 +100,17 @@ public class UserFrontServiceImpl implements UserFrontService {
                                 return Mono.just(errorRedirect("Ошибка при открытии счета"));
                             });
                 });
+    }
+
+    private @NotNull Mono<RedirectView> getRedirectView(ServerWebExchange exchange, Boolean success) {
+        if (Boolean.TRUE.equals(success)) {
+            log.info("Пароль успешно изменен, завершаем сессию.");
+            return exchange.getSession()
+                    .flatMap(WebSession::invalidate)
+                    .then(Mono.just(new RedirectView("/logout")));
+        } else {
+            return Mono.just(errorRedirect("Не удалось обновить пароль"));
+        }
     }
 
     private @NotNull URI getUri(UriBuilder uriBuilder, String currency) {

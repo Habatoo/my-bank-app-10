@@ -37,7 +37,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
     private final OutboxClientService outboxClientService;
-    private final WebClient webClient;
+    private final WebClient backgroundWebClient;
 
     @Value("${spring.security.oauth2.client.provider.keycloak.issuer-uri}")
     private String keycloakIssuerUri;
@@ -75,15 +75,11 @@ public class UserServiceImpl implements UserService {
 
         return findKeycloakUserId(adminUrl, login)
                 .flatMap(userId -> resetKeycloakPassword(adminUrl, userId, dto.getPassword()))
-                .thenReturn(true)
-                .onErrorResume(e -> {
-                    log.error("Password update failed for {}: {}", login, e.getMessage());
-                    return Mono.just(false);
-                });
+                .thenReturn(true);
     }
 
     private Mono<Void> resetKeycloakPassword(String adminUrl, String userId, String password) {
-        return webClient.put()
+        return backgroundWebClient.put()
                 .uri(adminUrl + "/users/{id}/reset-password", userId)
                 .bodyValue(Map.of("type", "password", "value", password, "temporary", false))
                 .retrieve()
@@ -92,7 +88,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private Mono<String> findKeycloakUserId(String adminUrl, String login) {
-        return webClient.get()
+        return backgroundWebClient.get()
                 .uri(adminUrl + "/users?username={login}", login)
                 .retrieve()
                 .bodyToFlux(Map.class)
