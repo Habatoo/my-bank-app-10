@@ -8,6 +8,7 @@ import io.github.habatoo.repositories.TransfersRepository;
 import io.github.habatoo.services.OutboxClientService;
 import io.github.habatoo.services.OutboxService;
 import io.github.habatoo.services.TransferService;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -80,6 +81,9 @@ public abstract class BaseTransferTest extends BaseTest {
 
     @MockitoBean
     protected OutboxClientService outboxClientService;
+
+    @Autowired
+    protected CircuitBreakerRegistry registry;
 
     @BeforeAll
     static void setUp() throws IOException {

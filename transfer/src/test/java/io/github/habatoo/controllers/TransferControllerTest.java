@@ -2,6 +2,7 @@ package io.github.habatoo.controllers;
 
 import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.dto.TransferDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.services.TransferService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,9 +46,6 @@ class TransferControllerTest {
         when(jwt.getClaimAsString("preferred_username")).thenReturn("sender_user");
     }
 
-    /**
-     * Тест проверяет сценарий успешного перевода при валидных входных данных.
-     */
     @Test
     @DisplayName("Успешный перевод: валидные данные и положительный баланс")
     void shouldReturnSuccessWhenTransferIsValidTest() {
@@ -56,6 +54,8 @@ class TransferControllerTest {
 
         TransferDto expectedDto = TransferDto.builder()
                 .login(targetAccount)
+                .fromCurrency(Currency.RUB)
+                .toCurrency(Currency.RUB)
                 .value(value)
                 .build();
 
@@ -68,7 +68,7 @@ class TransferControllerTest {
         when(transferService.processTransferOperation(eq("sender_user"), any(TransferDto.class)))
                 .thenReturn(Mono.just(successResult));
 
-        Mono<OperationResultDto<TransferDto>> result = transferController.updateBalance(value, targetAccount, RUB, jwt);
+        Mono<OperationResultDto<TransferDto>> result = transferController.transferToClient(expectedDto, jwt);
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> res.isSuccess()
@@ -78,40 +78,52 @@ class TransferControllerTest {
         verify(transferService).processTransferOperation(eq("sender_user"), any(TransferDto.class));
     }
 
-    /**
-     * Тест проверяет, что перевод отклоняется, если указана отрицательная сумма.
-     */
     @Test
     @DisplayName("Ошибка валидации: сумма перевода меньше или равна нулю")
     void shouldReturnErrorWhenValueIsInvalidTest() {
         BigDecimal invalidValue = new BigDecimal("-10.00");
-        String targetAccount = "recipient_user";
+        TransferDto expectedDto = TransferDto.builder()
+                .login("recipient_user")
+                .value(invalidValue)
+                .build();
 
-        Mono<OperationResultDto<TransferDto>> result = transferController.updateBalance(invalidValue, targetAccount, RUB, jwt);
+        when(transferService.processTransferOperation(anyString(), any(TransferDto.class)))
+                .thenReturn(Mono.just(OperationResultDto.<TransferDto>builder()
+                        .success(false)
+                        .message("Сумма перевода должна быть больше нуля")
+                        .build()));
+
+        Mono<OperationResultDto<TransferDto>> result = transferController.transferToClient(expectedDto, jwt);
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> !res.isSuccess()
                         && res.getMessage().contains("должна быть больше нуля"))
                 .verifyComplete();
 
-        verifyNoInteractions(transferService);
+        verify(transferService).processTransferOperation(anyString(), any(TransferDto.class));
     }
 
-    /**
-     * Тест проверяет поведение системы при передаче null в качестве суммы.
-     */
     @Test
     @DisplayName("Ошибка валидации: сумма перевода равна null")
     void shouldReturnErrorWhenValueIsNullTest() {
-        String targetAccount = "recipient_user";
+        TransferDto expectedDto = TransferDto.builder()
+                .login("recipient_user")
+                .value(null)
+                .build();
 
-        Mono<OperationResultDto<TransferDto>> result = transferController.updateBalance(null, targetAccount, RUB, jwt);
+        when(transferService.processTransferOperation(anyString(), any(TransferDto.class)))
+                .thenReturn(Mono.just(OperationResultDto.<TransferDto>builder()
+                        .success(false)
+                        .message("Сумма перевода должна быть больше нуля")
+                        .build()));
+
+        Mono<OperationResultDto<TransferDto>> result = transferController.transferToClient(expectedDto, jwt);
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> !res.isSuccess()
                         && res.getMessage().equals("Сумма перевода должна быть больше нуля"))
                 .verifyComplete();
 
-        verifyNoInteractions(transferService);
+        verify(transferService).processTransferOperation(anyString(), any(TransferDto.class));
     }
 }

@@ -9,14 +9,14 @@ import okhttp3.mockwebserver.MockResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.netty.http.client.HttpClient;
+import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
-import java.net.InetAddress;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,21 +32,20 @@ import static org.mockito.Mockito.*;
 class TransferServiceIntegrationTest extends BaseTransferTest {
 
     @BeforeEach
-    void setupWebClient() {
+    void setup() {
         int mockPort = mockWebServer.getPort();
-
-        HttpClient httpClient = HttpClient.create()
-                .resolver(nameResolverSpec -> nameResolverSpec
-                        .hostsFileEntriesResolver((inetAddress, hostsFileEntries) ->
-                                "gateway".equals(inetAddress) ? InetAddress.getLoopbackAddress() : null
-                        ));
+        String localHost = "http://localhost:" + mockPort;
 
         WebClient localWebClient = WebClient.builder()
-                .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .baseUrl("http://gateway:" + mockPort)
+                .baseUrl(localHost)
                 .build();
 
         ReflectionTestUtils.setField(transferService, "webClient", localWebClient);
+        ReflectionTestUtils.setField(transferService, "gatewayHost", localHost);
+
+        if (registry.circuitBreaker("transfer-service-cb") != null) {
+            registry.circuitBreaker("transfer-service-cb").reset();
+        }
     }
 
     @Test
@@ -55,19 +54,25 @@ class TransferServiceIntegrationTest extends BaseTransferTest {
         String sender = "sender_user";
         String recipient = "recipient_user";
         BigDecimal amount = new BigDecimal("500.00");
-        TransferDto dto = new TransferDto(recipient, amount, Currency.RUB);
+        TransferDto dto = TransferDto.builder()
+                .login(recipient)
+                .value(amount)
+                .fromCurrency(Currency.RUB)
+                .toCurrency(Currency.RUB)
+                .build();
 
-        OperationResultDto<Void> successResponse = OperationResultDto.<Void>builder().success(true).build();
+        OperationResultDto<Void> successResponse = OperationResultDto.<Void>builder()
+                .success(true).build();
         String jsonResponse = objectMapper.writeValueAsString(successResponse);
 
         mockWebServer.enqueue(new MockResponse()
                 .setBody(jsonResponse)
-                .addHeader("Content-Type", "application/json"));
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE));
         mockWebServer.enqueue(new MockResponse()
                 .setBody(jsonResponse)
-                .addHeader("Content-Type", "application/json"));
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE));
 
-        when(outboxClientService.saveEvent(any())).thenReturn(reactor.core.publisher.Mono.empty());
+        when(outboxClientService.saveEvent(any())).thenReturn(Mono.empty());
 
         var result = transfersRepository.deleteAll()
                 .then(transferService.processTransferOperation(sender, dto));
@@ -75,7 +80,7 @@ class TransferServiceIntegrationTest extends BaseTransferTest {
         StepVerifier.create(result)
                 .assertNext(res -> {
                     assertThat(res.isSuccess()).isTrue();
-                    assertThat(res.getMessage()).contains("успешно");
+                    assertThat(res.getMessage()).contains("Перевод выполнен");
                 })
                 .verifyComplete();
 
@@ -95,19 +100,29 @@ class TransferServiceIntegrationTest extends BaseTransferTest {
     void processTransferOperation_CompensateScenario() throws Exception {
         String sender = "sender_user";
         BigDecimal amount = new BigDecimal("100.00");
-        TransferDto dto = new TransferDto("recipient", amount, Currency.RUB);
+        TransferDto dto = TransferDto.builder()
+                .login("recipient")
+                .value(amount)
+                .fromCurrency(Currency.RUB)
+                .toCurrency(Currency.RUB)
+                .build();
 
-        OperationResultDto<Void> successRes = OperationResultDto.<Void>builder().success(true).build();
-        OperationResultDto<Void> failRes = OperationResultDto.<Void>builder().success(false).message("Limit exceeded").build();
+        OperationResultDto<Void> successRes = OperationResultDto.<Void>builder()
+                .success(true).build();
+        OperationResultDto<Void> failRes = OperationResultDto.<Void>builder()
+                .success(false).message("Limit").build();
 
-        mockWebServer.enqueue(new MockResponse().setBody(objectMapper.writeValueAsString(successRes))
-                .addHeader("Content-Type", "application/json"));
-        mockWebServer.enqueue(new MockResponse().setBody(objectMapper.writeValueAsString(failRes))
-                .addHeader("Content-Type", "application/json"));
-        mockWebServer.enqueue(new MockResponse().setBody(objectMapper.writeValueAsString(successRes))
-                .addHeader("Content-Type", "application/json"));
+        mockWebServer.enqueue(new MockResponse()
+                .setBody(objectMapper.writeValueAsString(successRes))
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE));
+        mockWebServer.enqueue(new MockResponse()
+                .setBody(objectMapper.writeValueAsString(failRes))
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE));
+        mockWebServer.enqueue(new MockResponse()
+                .setBody(objectMapper.writeValueAsString(successRes))
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE));
 
-        when(outboxClientService.saveEvent(any())).thenReturn(reactor.core.publisher.Mono.empty());
+        when(outboxClientService.saveEvent(any())).thenReturn(Mono.empty());
 
         var result = transfersRepository.deleteAll()
                 .then(transferService.processTransferOperation(sender, dto));
@@ -115,7 +130,7 @@ class TransferServiceIntegrationTest extends BaseTransferTest {
         StepVerifier.create(result)
                 .assertNext(res -> {
                     assertThat(res.isSuccess()).isFalse();
-                    assertThat(res.getMessage()).contains("Деньги возвращены");
+                    assertThat(res.getMessage()).contains("Средства возвращены");
                 })
                 .verifyComplete();
 
@@ -123,6 +138,7 @@ class TransferServiceIntegrationTest extends BaseTransferTest {
                 .expectNext(0L)
                 .verifyComplete();
 
-        verify(outboxClientService).saveEvent(argThat(event -> event.getStatus() == EventStatus.FAILURE));
+        verify(outboxClientService).saveEvent(
+                argThat(event -> event.getStatus() == EventStatus.FAILURE));
     }
 }

@@ -91,7 +91,8 @@ public abstract class BaseTransferContractTest {
         TransferDto resultDto = TransferDto.builder()
                 .login(targetAccount)
                 .value(amount)
-                .currency(Currency.RUB)
+                .fromCurrency(Currency.RUB)
+                .toCurrency(Currency.RUB)
                 .build();
         OperationResultDto<TransferDto> successResponse = OperationResultDto.<TransferDto>builder()
                 .success(true)
