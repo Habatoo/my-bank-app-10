@@ -9,6 +9,7 @@ import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOper
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -29,6 +30,9 @@ public class TransferFrontServiceImpl implements TransferFrontService {
 
     private final WebClient webClient;
     private final CircuitBreakerRegistry registry;
+
+    @Value("${spring.application.gateway.host:http://gateway}")
+    private String gatewayHost;
 
     /**
      * {@inheritDoc}
@@ -102,9 +106,12 @@ public class TransferFrontServiceImpl implements TransferFrontService {
     }
 
     private @NotNull URI getUri(String path, UriBuilder uriBuilder) {
+        URI baseUri = URI.create(gatewayHost);
+
         return uriBuilder
-                .scheme("http")
-                .host("gateway")
+                .scheme(baseUri.getScheme())
+                .host(baseUri.getHost())
+                .port(baseUri.getPort())
                 .path(path)
                 .build();
     }

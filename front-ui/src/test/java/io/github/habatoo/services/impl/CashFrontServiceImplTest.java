@@ -2,6 +2,8 @@ package io.github.habatoo.services.impl;
 
 import io.github.habatoo.dto.CashDto;
 import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.enums.Currency;
+import io.github.habatoo.dto.enums.OperationType;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,9 +24,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 
 import static io.github.habatoo.dto.enums.OperationType.GET;
-import static io.github.habatoo.dto.enums.OperationType.PUT;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
@@ -34,6 +37,7 @@ import static org.mockito.Mockito.when;
  * обработку успешных ответов и сценарии возникновения ошибок.
  * </p>
  */
+@SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Юнит-тесты сервиса наличных (CashFrontServiceImpl)")
 class CashFrontServiceImplTest {
@@ -42,21 +46,16 @@ class CashFrontServiceImplTest {
     private WebClient webClient;
 
     @Mock
-    @SuppressWarnings("rawtypes")
     private WebClient.RequestBodyUriSpec requestBodyUriSpec;
 
     @Mock
-    @SuppressWarnings("rawtypes")
     private WebClient.RequestBodySpec requestBodySpec;
 
     @Mock
     private WebClient.ResponseSpec responseSpec;
 
     @Mock
-    private CircuitBreakerRegistry circuitBreakerRegistry;
-
-    @Mock
-    private CircuitBreaker circuitBreaker;
+    private CircuitBreakerRegistry registry;
 
     @InjectMocks
     private CashFrontServiceImpl cashService;
@@ -65,27 +64,26 @@ class CashFrontServiceImplTest {
     @SuppressWarnings("unchecked")
     void setUp() {
         CircuitBreaker cb = CircuitBreaker.ofDefaults("gateway-cb");
-        when(circuitBreakerRegistry.circuitBreaker("gateway-cb")).thenReturn(cb);
+        lenient().when(registry.circuitBreaker("gateway-cb")).thenReturn(cb);
 
-        when(webClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodySpec);
-        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        lenient().when(webClient.post()).thenReturn(requestBodyUriSpec);
+        lenient().when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodySpec);
+        lenient().when(requestBodySpec.retrieve()).thenReturn(responseSpec);
     }
 
-    /**
-     * Тест проверяет успешное выполнение операции пополнения счета.
-     * Ожидается корректный редирект с информационным сообщением.
-     */
     @Test
     @DisplayName("Успешное пополнение счета — Проверка редиректа")
     void shouldReturnSuccessRedirectOnPutTest() {
+        BigDecimal value = new BigDecimal("1000.00");
         CashDto dto = CashDto.builder()
-                .value(new BigDecimal("1000"))
-                .action(PUT)
+                .value(value)
+                .action(OperationType.PUT)
+                .currency(Currency.RUB)
                 .build();
 
         OperationResultDto<CashDto> resultDto = OperationResultDto.<CashDto>builder()
                 .success(true)
+                .data(dto)
                 .build();
 
         when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
@@ -95,16 +93,14 @@ class CashFrontServiceImplTest {
 
         StepVerifier.create(result)
                 .assertNext(url -> {
-                    assertTrue(url.contains("redirect:/main?info="));
-                    assertTrue(url.contains(URLEncoder.encode("Пополнение на сумму 1000", StandardCharsets.UTF_8)));
+                    assertThat(url).startsWith("redirect:/main?info=");
+                    assertThat(url).contains("1000");
+                    assertThat(url).contains("RUB");
+                    assertThat(url).contains(URLEncoder.encode("выполнено успешно", StandardCharsets.UTF_8));
                 })
                 .verifyComplete();
     }
 
-    /**
-     * Тест проверяет поведение системы при получении ошибки от API.
-     * Ожидается редирект с текстом ошибки, переданным от сервера.
-     */
     @Test
     @DisplayName("Обработка ошибки от API — Проверка передачи сообщения")
     void shouldReturnErrorRedirectOnApiFailureTest() {
@@ -131,14 +127,13 @@ class CashFrontServiceImplTest {
                 .verifyComplete();
     }
 
-    /**
-     * Тест проверяет устойчивость сервиса к системным исключениям (например, недоступность Gateway).
-     */
     @Test
     @DisplayName("Системная ошибка (Exception) — Проверка защитного механизма")
     void shouldHandleSystemExceptionTest() {
         CashDto dto = CashDto.builder()
                 .value(new BigDecimal("100"))
+                .action(OperationType.PUT)
+                .currency(Currency.RUB)
                 .build();
 
         when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
@@ -148,7 +143,10 @@ class CashFrontServiceImplTest {
 
         StepVerifier.create(result)
                 .assertNext(url -> {
-                    assertTrue(url.contains("error=" + URLEncoder.encode("Сервис временно недоступен", StandardCharsets.UTF_8)));
+                    String expectedErrorMsg = URLEncoder.encode("Сервис операций временно недоступен", StandardCharsets.UTF_8);
+                    assertThat(url)
+                            .startsWith("redirect:/main?error=")
+                            .contains(expectedErrorMsg);
                 })
                 .verifyComplete();
     }

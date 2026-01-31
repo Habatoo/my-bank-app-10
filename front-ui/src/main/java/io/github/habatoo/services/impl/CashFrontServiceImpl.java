@@ -10,6 +10,7 @@ import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOper
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -28,8 +29,13 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class CashFrontServiceImpl implements CashFrontService {
 
+    private static final String API_URL = "/api/main/cash";
+
     private final WebClient webClient;
     private final CircuitBreakerRegistry registry;
+
+    @Value("${spring.application.gateway.host:http://gateway}")
+    private String gatewayHost;
 
     /**
      * {@inheritDoc}
@@ -64,11 +70,14 @@ public class CashFrontServiceImpl implements CashFrontService {
         return "redirect:/main?error=" + URLEncoder.encode(result.getMessage(), StandardCharsets.UTF_8);
     }
 
-    private URI getUri(CashDto cashDto, UriBuilder uriBuilder) {
+    private @NotNull URI getUri(CashDto cashDto, UriBuilder uriBuilder) {
+        URI baseUri = URI.create(gatewayHost);
+
         return uriBuilder
-                .scheme("http")
-                .host("gateway")
-                .path("/api/main/cash")
+                .scheme(baseUri.getScheme())
+                .host(baseUri.getHost())
+                .port(baseUri.getPort())
+                .path(API_URL)
                 .queryParam("value", cashDto.getValue())
                 .queryParam("action", cashDto.getAction())
                 .queryParam("currency", cashDto.getCurrency())

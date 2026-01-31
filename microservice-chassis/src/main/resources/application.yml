@@ -3,6 +3,8 @@ spring:
     name: template
     notification:
       url: ${NOTIFICATION_HOST:http://localhost:8085/notification}
+    gateway:
+      host: ${GATEWAY_HOST:http://gateway}
     date: yyyy-MM-dd HH:mm:ss
     fixed_write_delay: 5000
     fixed_clean_delay: 50000

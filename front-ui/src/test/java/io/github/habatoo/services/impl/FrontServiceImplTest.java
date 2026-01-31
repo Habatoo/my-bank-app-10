@@ -1,6 +1,8 @@
 package io.github.habatoo.services.impl;
 
-import io.github.habatoo.dto.AccountFullResponseDto;
+import io.github.habatoo.dto.AccountDto;
+import io.github.habatoo.dto.AccountShortDto;
+import io.github.habatoo.dto.UserProfileResponseDto;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,10 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.result.view.Rendering;
 import reactor.core.publisher.Flux;
@@ -24,7 +23,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -56,65 +55,119 @@ class FrontServiceImplTest {
     @Mock
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
-    @Mock
-    private CircuitBreaker circuitBreaker;
-
     @InjectMocks
     private FrontServiceImpl frontService;
-
-    private SecurityContext securityContext;
 
     @BeforeEach
     @SuppressWarnings("unchecked")
     void setUp() {
-        CircuitBreaker cb = CircuitBreaker.ofDefaults("gateway-cb");
-        when(circuitBreakerRegistry.circuitBreaker("gateway-cb")).thenReturn(cb);
-
-        var auth = new UsernamePasswordAuthenticationToken("user", "password");
-        securityContext = new SecurityContextImpl(auth);
+        CircuitBreaker cb = CircuitBreaker.ofDefaults("accountServiceCB");
+        when(circuitBreakerRegistry.circuitBreaker("accountServiceCB")).thenReturn(cb);
 
         when(webClient.get()).thenReturn(requestHeadersUriSpec);
         when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        ReflectionTestUtils.setField(frontService, "gatewayHost", "http://localhost:8080");
     }
 
     @Test
     @DisplayName("Успешная загрузка данных главной страницы")
     void shouldReturnRenderingWithFullData() {
-        AccountFullResponseDto mockAccount = AccountFullResponseDto.builder()
-                .name("Тестовый Пользователь")
-                .balance(new BigDecimal("1000.00"))
-                .birthDate(LocalDate.of(1990, 1, 1))
+        AccountDto myAccount = AccountDto.builder()
+                .balance(new BigDecimal("1500.00"))
                 .build();
 
-        when(responseSpec.bodyToMono(AccountFullResponseDto.class)).thenReturn(Mono.just(mockAccount));
-        when(responseSpec.bodyToFlux(AccountFullResponseDto.class)).thenReturn(Flux.just(mockAccount));
+        UserProfileResponseDto profile = UserProfileResponseDto.builder()
+                .name("Ivan Ivanov")
+                .login("ivan")
+                .birthDate(LocalDate.of(1990, 5, 15))
+                .accounts(List.of(myAccount))
+                .build();
 
-        Mono<Rendering> result = frontService.showMainPage("Info message", null);
+        AccountShortDto otherUser = AccountShortDto.builder()
+                .login("petr")
+                .name("Petr Petrov")
+                .build();
 
-        StepVerifier.create(result.contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(securityContext))))
+        when(responseSpec.bodyToMono(UserProfileResponseDto.class)).thenReturn(Mono.just(profile));
+        when(responseSpec.bodyToFlux(AccountShortDto.class)).thenReturn(Flux.just(otherUser));
+
+        Mono<Rendering> result = frontService.showMainPage("Welcome", null);
+
+        StepVerifier.create(result)
                 .assertNext(rendering -> {
-                    assertEquals("main", rendering.view());
-                    assertEquals("Тестовый Пользователь", rendering.modelAttributes().get("name"));
+                    assertThat(rendering.view()).isEqualTo("main");
+                    var model = rendering.modelAttributes();
+                    assertThat(model.get("name")).isEqualTo("Ivan Ivanov");
+                    assertThat(model.get("sum")).isEqualTo(new BigDecimal("1500.00"));
+                    assertThat(model.get("info")).isEqualTo("Welcome");
+
+                    List<?> otherUsersList = (List<?>) model.get("accounts");
+                    assertThat(otherUsersList).hasSize(1);
                 })
                 .verifyComplete();
     }
 
     @Test
-    @DisplayName("Обработка ошибки списка аккаунтов")
-    void shouldHandleAllAccountsErrorGracefully() {
-        AccountFullResponseDto mockAccount = AccountFullResponseDto.builder().name("User").build();
+    @DisplayName("Частичный успех: Список других пользователей недоступен")
+    void shouldHandleOtherUsersErrorButShowProfile() {
+        UserProfileResponseDto profile = UserProfileResponseDto.builder()
+                .name("Ivan")
+                .accounts(List.of())
+                .build();
 
-        when(responseSpec.bodyToMono(AccountFullResponseDto.class)).thenReturn(Mono.just(mockAccount));
-        when(responseSpec.bodyToFlux(AccountFullResponseDto.class)).thenReturn(Flux.error(new RuntimeException("API Error")));
+        when(responseSpec.bodyToMono(UserProfileResponseDto.class)).thenReturn(Mono.just(profile));
+        when(responseSpec.bodyToFlux(AccountShortDto.class)).thenReturn(Flux.error(new RuntimeException("Flux Error")));
 
-        Mono<Rendering> result = frontService.showMainPage(null, "System Error");
+        Mono<Rendering> result = frontService.showMainPage(null, null);
 
-        StepVerifier.create(result.contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(securityContext))))
+        StepVerifier.create(result)
                 .assertNext(rendering -> {
-                    List<?> accounts = (List<?>) rendering.modelAttributes().get("accounts");
-                    assertEquals(0, accounts.size());
-                    assertEquals(List.of("System Error"), rendering.modelAttributes().get("errors"));
+                    assertThat(rendering.view()).isEqualTo("main");
+                    List<?> others = (List<?>) rendering.modelAttributes().get("accounts");
+                    assertThat(others).isEmpty();
+                    assertThat(rendering.modelAttributes().get("name")).isEqualTo("Ivan");
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Полный отказ: Ошибка профиля — Возврат страницы с ошибкой")
+    void shouldHandleProfileError() {
+        when(responseSpec.bodyToMono(UserProfileResponseDto.class))
+                .thenReturn(Mono.error(new RuntimeException("Service Down")));
+        when(responseSpec.bodyToFlux(AccountShortDto.class)).thenReturn(Flux.empty());
+
+        Mono<Rendering> result = frontService.showMainPage(null, null);
+
+        StepVerifier.create(result)
+                .assertNext(rendering -> {
+                    assertThat(rendering.view()).isEqualTo("main");
+                    List<String> errors = (List<String>) rendering.modelAttributes().get("errors");
+                    assertThat(errors).contains("Сервис временно недоступен");
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Проверка расчета суммы баланса")
+    void shouldCalculateTotalBalanceCorrectly() {
+        AccountDto acc1 = AccountDto.builder().balance(new BigDecimal("100.50")).build();
+        AccountDto acc2 = AccountDto.builder().balance(new BigDecimal("200.50")).build();
+
+        UserProfileResponseDto profile = UserProfileResponseDto.builder()
+                .accounts(List.of(acc1, acc2))
+                .build();
+
+        when(responseSpec.bodyToMono(UserProfileResponseDto.class)).thenReturn(Mono.just(profile));
+        when(responseSpec.bodyToFlux(AccountShortDto.class)).thenReturn(Flux.empty());
+
+        Mono<Rendering> result = frontService.showMainPage(null, null);
+
+        StepVerifier.create(result)
+                .assertNext(rendering -> {
+                    BigDecimal total = (BigDecimal) rendering.modelAttributes().get("sum");
+                    assertThat(total).isEqualByComparingTo("301.00");
                 })
                 .verifyComplete();
     }

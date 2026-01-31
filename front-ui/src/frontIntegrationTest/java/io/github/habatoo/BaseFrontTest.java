@@ -32,6 +32,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.io.IOException;
 import java.math.BigDecimal;
 
+@SuppressWarnings("unchecked")
 @ActiveProfiles("test")
 @SpringBootTest(
         classes = {
@@ -88,7 +89,7 @@ public abstract class BaseFrontTest extends BaseTest {
 
     @DynamicPropertySource
     static void webClientProperties(DynamicPropertyRegistry registry) {
-        registry.add("gateway.host", () -> "http://localhost:" + mockWebServer.getPort());
+        registry.add("spring.application.gateway.host", () -> "http://localhost:" + mockWebServer.getPort());
     }
 
     protected CashDto createCashDto(

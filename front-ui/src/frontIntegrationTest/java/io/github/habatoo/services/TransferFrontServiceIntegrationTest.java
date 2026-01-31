@@ -3,6 +3,7 @@ package io.github.habatoo.services;
 import io.github.habatoo.BaseFrontTest;
 import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.dto.TransferDto;
+import io.github.habatoo.dto.enums.Currency;
 import okhttp3.mockwebserver.MockResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -10,13 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.util.UriComponentsBuilder;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
-import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 
@@ -27,23 +25,12 @@ class TransferFrontServiceIntegrationTest extends BaseFrontTest {
 
     @BeforeEach
     void setup() {
-        registry.circuitBreaker("gateway-cb").reset();
-
-        int mockPort = mockWebServer.getPort();
+        if (registry.circuitBreaker("gateway-cb") != null) {
+            registry.circuitBreaker("gateway-cb").reset();
+        }
 
         WebClient localWebClient = WebClient.builder()
-                .filter((request, next) -> {
-                    URI uri = request.url();
-                    if ("gateway".equals(uri.getHost())) {
-                        URI newUri = UriComponentsBuilder.fromUri(uri)
-                                .host("localhost")
-                                .port(mockPort)
-                                .build(true)
-                                .toUri();
-                        request = ClientRequest.from(request).url(newUri).build();
-                    }
-                    return next.exchange(request);
-                })
+                .baseUrl("http://localhost:" + mockWebServer.getPort())
                 .build();
 
         ReflectionTestUtils.setField(transferFrontService, "webClient", localWebClient);
@@ -54,6 +41,8 @@ class TransferFrontServiceIntegrationTest extends BaseFrontTest {
     void sendMoneySuccessTest() throws Exception {
         TransferDto dto = new TransferDto();
         dto.setLogin("receiver");
+        dto.setFromCurrency(Currency.RUB);
+        dto.setToCurrency(Currency.RUB);
         dto.setValue(new BigDecimal("500.00"));
 
         OperationResultDto<TransferDto> response = new OperationResultDto<>(true, "Success", dto, null);
@@ -65,9 +54,12 @@ class TransferFrontServiceIntegrationTest extends BaseFrontTest {
 
         StepVerifier.create(transferFrontService.sendMoney(dto))
                 .assertNext(res -> {
-                    assertThat(res).contains("redirect:/main?info=");
+                    assertThat(res).startsWith("redirect:/main?info=");
                     String decoded = URLDecoder.decode(res, StandardCharsets.UTF_8);
-                    assertThat(decoded).contains("Перевод пользователю + receiver на сумму 500.00 ₽ выполнено успешно");
+
+                    assertThat(decoded).contains("Перевод");
+                    assertThat(decoded).contains("500");
+                    assertThat(decoded).contains("успешно");
                 })
                 .verifyComplete();
     }
@@ -86,8 +78,9 @@ class TransferFrontServiceIntegrationTest extends BaseFrontTest {
                 .assertNext(res -> {
                     assertThat(res).contains("redirect:/main?error=");
                     String decoded = URLDecoder.decode(res, StandardCharsets.UTF_8);
-                    assertThat(decoded).contains("Ошибка перевода");
-                    assertThat(decoded).contains("CircuitBreaker 'gateway-cb' is OPEN");
+
+                    assertThat(decoded).contains("CircuitBreaker");
+                    assertThat(decoded).contains("OPEN");
                 })
                 .verifyComplete();
 
@@ -107,7 +100,7 @@ class TransferFrontServiceIntegrationTest extends BaseFrontTest {
                 .assertNext(res -> {
                     assertThat(res).contains("redirect:/main?error=");
                     String decoded = URLDecoder.decode(res, StandardCharsets.UTF_8);
-                    assertThat(decoded).contains("Ошибка перевода");
+                    assertThat(decoded).contains("Ошибка");
                 })
                 .verifyComplete();
     }

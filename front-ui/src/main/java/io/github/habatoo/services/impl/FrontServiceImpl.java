@@ -8,9 +8,11 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.result.view.Rendering;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
@@ -27,7 +29,9 @@ public class FrontServiceImpl implements FrontService {
 
     private final WebClient webClient;
     private final CircuitBreakerRegistry registry;
-    private static final String BASE_URL = "http://gateway/api";
+
+    @Value("${spring.application.gateway.host:http://gateway}")
+    private String gatewayHost;
 
     @Override
     public Mono<Rendering> showMainPage(String info, String error) {
@@ -61,7 +65,7 @@ public class FrontServiceImpl implements FrontService {
      */
     private Mono<UserProfileResponseDto> fetchUserProfile() {
         return webClient.get()
-                .uri(BASE_URL + "/main/user")
+                .uri(getApiUrl("/api/main/user"))
                 .retrieve()
                 .bodyToMono(UserProfileResponseDto.class)
                 .transformDeferred(CircuitBreakerOperator.of(registry.circuitBreaker("accountServiceCB")))
@@ -73,7 +77,7 @@ public class FrontServiceImpl implements FrontService {
      */
     private Mono<List<AccountShortDto>> fetchOtherUsers() {
         return webClient.get()
-                .uri(BASE_URL + "/main/users")
+                .uri(getApiUrl("/api/main/users"))
                 .retrieve()
                 .bodyToFlux(AccountShortDto.class)
                 .transformDeferred(CircuitBreakerOperator.of(registry.circuitBreaker("accountServiceCB")))
@@ -89,5 +93,11 @@ public class FrontServiceImpl implements FrontService {
         return accounts.stream()
                 .map(AccountDto::getBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private String getApiUrl(String path) {
+        return UriComponentsBuilder.fromUriString(gatewayHost)
+                .path(path)
+                .toUriString();
     }
 }
