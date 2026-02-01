@@ -1,0 +1,15 @@
+# Значения по умолчанию для шаблона postgres-db
+image:
+  repository: postgres
+  tag: 17-alpine
+
+postgres:
+  db: default_db
+  user: admin
+  password: change_me_secretly
+
+persistence:
+  size: 1Gi
+
+service:
+  port: 5432

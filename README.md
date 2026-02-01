@@ -78,25 +78,25 @@ my-bank-app/
 ## Быстрый старт
 Быстрый старт
 1. Подготовка окружения
-   <br>Убедитесь, что у вас установлены Docker и Docker Buildx. 
-   <br>Настройте параметры в файле ./env/.env.
 ```bash
    git clone -b feature/module_two_sprint_eight_branch https://github.com/Habatoo/my-bank-app-10.git
    cd my-bank-app-10
 ```
 
 2. Сборка и запуск
-   <br>Сборка всех модулей и запуск инфраструктуры выполняется одной командой благодаря Docker Bake:
-   <br> Сборка всех образов параллельно
+
 ```bash
 
-docker buildx bake
-```
-   <br>Запуск всех контейнеров
-```bash
+minikube start
+minikube addons enable ingress
 
-docker compose up -d 
+kubectl create namespace dev
+
+helm install my-bank
+helm install my-bank . -n dev
 ```
+   
+
 
 3. Доступ к приложению
 - Front UI: http://localhost:8081

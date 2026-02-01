@@ -1,0 +1,31 @@
+account-db:
+  postgres:
+    db: account_db
+    user: bank_admin
+    password: bank_password
+  persistence:
+    size: 1Gi
+
+cash-db:
+  postgres:
+    db: cash_db
+    user: bank_admin
+    password: bank_password
+  persistence:
+    size: 1Gi
+
+notification-db:
+  postgres:
+    db: notification_db
+    user: bank_admin
+    password: bank_password
+  persistence:
+    size: 1Gi
+
+transfer-db:
+  postgres:
+    db: transfer_db
+    user: bank_admin
+    password: bank_password
+  persistence:
+    size: 1Gi
