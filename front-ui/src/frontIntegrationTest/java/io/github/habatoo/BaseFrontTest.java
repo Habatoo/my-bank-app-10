@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.habatoo.base.BaseTest;
 import io.github.habatoo.dto.CashDto;
 import io.github.habatoo.dto.enums.OperationType;
-import io.github.habatoo.services.CashFrontService;
-import io.github.habatoo.services.FrontService;
-import io.github.habatoo.services.TransferFrontService;
-import io.github.habatoo.services.UserFrontService;
+import io.github.habatoo.services.*;
 import io.github.habatoo.services.impl.CashFrontServiceImpl;
 import io.github.habatoo.services.impl.FrontServiceImpl;
 import io.github.habatoo.services.impl.TransferFrontServiceImpl;
@@ -39,6 +36,8 @@ import java.math.BigDecimal;
                 UserFrontServiceImpl.class,
                 TransferFrontServiceImpl.class,
                 FrontServiceImpl.class,
+                RateClientService.class,
+                RateProviderService.class,
                 CashFrontServiceImpl.class,
                 JacksonAutoConfiguration.class,
                 WebClientAutoConfiguration.class
@@ -72,6 +71,12 @@ public abstract class BaseFrontTest extends BaseTest {
 
     @Autowired
     protected CircuitBreakerRegistry registry;
+
+    @Autowired
+    protected RateClientService rateClientService;
+
+    @Autowired
+    protected RateProviderService rateProviderService;
 
     @Autowired
     protected ObjectMapper objectMapper;

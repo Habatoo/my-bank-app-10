@@ -168,7 +168,7 @@
                                         <label class="section-label">Получатель</label>
                                         <select class="form-select" name="login">
                                             <option th:each="u : ${accounts}"
-                                                    th:value="${u.login}"
+                                                    th:value="${u.login + ':' + u.currency}"
                                                     th:text="${u.name + ' (' + u.currency + ')'}">Имя (RUB)</option>
                                         </select>
                                     </div>

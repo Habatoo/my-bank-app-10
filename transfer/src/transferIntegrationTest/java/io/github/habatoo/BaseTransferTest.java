@@ -7,6 +7,7 @@ import io.github.habatoo.models.Transfer;
 import io.github.habatoo.repositories.TransfersRepository;
 import io.github.habatoo.services.OutboxClientService;
 import io.github.habatoo.services.OutboxService;
+import io.github.habatoo.services.RateClientService;
 import io.github.habatoo.services.TransferService;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import okhttp3.mockwebserver.MockWebServer;
@@ -81,6 +82,9 @@ public abstract class BaseTransferTest extends BaseTest {
 
     @MockitoBean
     protected OutboxClientService outboxClientService;
+
+    @MockitoBean
+    protected RateClientService rateClientService;
 
     @Autowired
     protected CircuitBreakerRegistry registry;

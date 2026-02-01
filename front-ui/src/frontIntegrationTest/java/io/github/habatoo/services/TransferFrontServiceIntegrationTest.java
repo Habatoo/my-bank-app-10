@@ -45,7 +45,11 @@ class TransferFrontServiceIntegrationTest extends BaseFrontTest {
         dto.setToCurrency(Currency.RUB);
         dto.setValue(new BigDecimal("500.00"));
 
-        OperationResultDto<TransferDto> response = new OperationResultDto<>(true, "Success", dto, null);
+        OperationResultDto<TransferDto> response = new OperationResultDto<>(
+                true,
+                "Success",
+                dto,
+                null);
 
         mockWebServer.enqueue(new MockResponse()
                 .setResponseCode(200)
@@ -57,9 +61,9 @@ class TransferFrontServiceIntegrationTest extends BaseFrontTest {
                     assertThat(res).startsWith("redirect:/main?info=");
                     String decoded = URLDecoder.decode(res, StandardCharsets.UTF_8);
 
-                    assertThat(decoded).contains("Перевод");
-                    assertThat(decoded).contains("500");
-                    assertThat(decoded).contains("успешно");
+                    assertThat(decoded).contains("Перевод пользователю");
+                    assertThat(decoded).contains("списано 500.00 RUB");
+                    assertThat(decoded).contains("зачислено 500.00 RUB");
                 })
                 .verifyComplete();
     }
@@ -78,9 +82,7 @@ class TransferFrontServiceIntegrationTest extends BaseFrontTest {
                 .assertNext(res -> {
                     assertThat(res).contains("redirect:/main?error=");
                     String decoded = URLDecoder.decode(res, StandardCharsets.UTF_8);
-
-                    assertThat(decoded).contains("CircuitBreaker");
-                    assertThat(decoded).contains("OPEN");
+                    assertThat(decoded).contains("Сервис недоступен");
                 })
                 .verifyComplete();
 
@@ -100,7 +102,7 @@ class TransferFrontServiceIntegrationTest extends BaseFrontTest {
                 .assertNext(res -> {
                     assertThat(res).contains("redirect:/main?error=");
                     String decoded = URLDecoder.decode(res, StandardCharsets.UTF_8);
-                    assertThat(decoded).contains("Ошибка");
+                    assertThat(decoded).contains("Сервис недоступен");
                 })
                 .verifyComplete();
     }

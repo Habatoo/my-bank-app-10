@@ -3,6 +3,7 @@ package io.github.habatoo.services.impl;
 import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.dto.TransferDto;
 import io.github.habatoo.dto.enums.Currency;
+import io.github.habatoo.services.RateClientService;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +40,9 @@ class TransferFrontServiceImplTest {
     private WebClient webClient;
 
     @Mock
+    private RateClientService rateClientService;
+
+    @Mock
     private WebClient.RequestBodyUriSpec requestBodyUriSpec;
 
     @Mock
@@ -65,6 +69,7 @@ class TransferFrontServiceImplTest {
         lenient().when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodySpec);
         lenient().when(requestBodySpec.bodyValue(any())).thenReturn(requestHeadersSpec);
         lenient().when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        lenient().when(rateClientService.takeRate(any(Currency.class), any(Currency.class))).thenReturn(BigDecimal.ONE);
     }
 
     @Test
@@ -74,6 +79,9 @@ class TransferFrontServiceImplTest {
         dto.setLogin("receiver_user");
         dto.setValue(new BigDecimal("500"));
         dto.setFromCurrency(Currency.USD);
+        dto.setToCurrency(Currency.USD);
+
+        when(rateClientService.takeRate(Currency.USD, Currency.USD)).thenReturn(BigDecimal.ONE);
 
         OperationResultDto<TransferDto> successResponse = OperationResultDto.<TransferDto>builder()
                 .success(true)
@@ -87,7 +95,10 @@ class TransferFrontServiceImplTest {
         StepVerifier.create(result)
                 .assertNext(url -> {
                     assertThat(url).startsWith("redirect:/main?info=");
-                    String expectedMsg = "Перевод пользователю на сумму 500 USD выполнен успешно";
+
+                    String expectedMsg = String.format("Перевод пользователю: списано %.2f %s, зачислено %.2f %s",
+                            new BigDecimal("500"), Currency.USD, new BigDecimal("500"), Currency.USD);
+
                     assertThat(url).contains(URLEncoder.encode(expectedMsg, StandardCharsets.UTF_8));
                 })
                 .verifyComplete();
@@ -165,6 +176,8 @@ class TransferFrontServiceImplTest {
     @DisplayName("Системное исключение — Проверка префикса ошибки")
     void shouldHandleWebClientExceptionTest() {
         TransferDto dto = new TransferDto();
+        dto.setFromCurrency(Currency.RUB);
+        dto.setLogin("user:RUB");
         dto.setValue(new BigDecimal("10"));
 
         when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
@@ -174,8 +187,8 @@ class TransferFrontServiceImplTest {
 
         StepVerifier.create(result)
                 .assertNext(url -> {
-                    String expectedPart = URLEncoder.encode("Ошибка: Connection refused", StandardCharsets.UTF_8);
-                    assertThat(url).contains(expectedPart);
+                    String expectedError = URLEncoder.encode("Сервис недоступен", StandardCharsets.UTF_8);
+                    assertThat(url).contains(expectedError);
                 })
                 .verifyComplete();
     }

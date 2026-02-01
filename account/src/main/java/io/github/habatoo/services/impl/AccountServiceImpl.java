@@ -15,6 +15,7 @@ import io.github.habatoo.services.AccountService;
 import io.github.habatoo.services.OutboxClientService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
@@ -75,13 +76,7 @@ public class AccountServiceImpl implements AccountService {
         return parseCurrency(currencyStr)
                 .flatMap(currency -> findUserByLogin(login)
                         .flatMap(user -> accountRepository.findByUserIdAndCurrency(user.getId(), currency)))
-                .flatMap(account -> {
-                    BigDecimal newBalance = account.getBalance().add(delta);
-                    if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
-                        return Mono.just(createErrorResponse("INSUFFICIENT_FUNDS", "Недостаточно средств"));
-                    }
-                    return updateAccountBalance(account, login, delta, newBalance);
-                })
+                .flatMap(account -> getAccount(login, delta, account))
                 .switchIfEmpty(Mono.just(createErrorResponse("ACCOUNT_NOT_FOUND", "Счет не найден")))
                 .onErrorResume(e -> Mono.just(createErrorResponse("VALIDATION_ERROR", e.getMessage())));
     }
@@ -95,6 +90,17 @@ public class AccountServiceImpl implements AccountService {
                                 .flatMap(exists -> Mono.just(createErrorResponse("ACCOUNT_EXISTS", "Счет уже открыт")))
                                 .switchIfEmpty(createNewAccount(user, currency))))
                 .onErrorResume(e -> Mono.just(createErrorResponse("ERROR", e.getMessage())));
+    }
+
+    private @NotNull Mono<OperationResultDto<Void>> getAccount(
+            String login,
+            BigDecimal delta,
+            Account account) {
+        BigDecimal newBalance = account.getBalance().add(delta);
+        if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
+            return Mono.just(createErrorResponse("INSUFFICIENT_FUNDS", "Недостаточно средств"));
+        }
+        return updateAccountBalance(account, login, delta, newBalance);
     }
 
     private Mono<Currency> parseCurrency(String curStr) {

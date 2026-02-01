@@ -117,3 +117,12 @@ logging:
 springdoc:
   server:
     port: ${server.port}
+
+rate:
+  rates:
+    rub_to_usd: 0.013
+    rub_to_cny: 0.091
+    cny_to_usd: 0.14
+    cny_to_rub: 10.99
+    usd_to_rub: 76.38
+    usd_to_cny: 6.95

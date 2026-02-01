@@ -8,6 +8,7 @@ import io.github.habatoo.dto.enums.EventStatus;
 import io.github.habatoo.models.Transfer;
 import io.github.habatoo.repositories.TransfersRepository;
 import io.github.habatoo.services.OutboxClientService;
+import io.github.habatoo.services.RateClientService;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +52,9 @@ class TransferServiceImplTest {
     private CircuitBreakerRegistry registry;
 
     @Mock
+    private RateClientService rateClientService;
+
+    @Mock
     private WebClient webClient;
 
     @Mock
@@ -80,6 +84,7 @@ class TransferServiceImplTest {
 
         CircuitBreaker cb = CircuitBreaker.ofDefaults("transfer-service-cb");
         lenient().when(registry.circuitBreaker("transfer-service-cb")).thenReturn(cb);
+        lenient().when(rateClientService.takeRate(any(Currency.class), any(Currency.class))).thenReturn(BigDecimal.ONE);
     }
 
     @Test

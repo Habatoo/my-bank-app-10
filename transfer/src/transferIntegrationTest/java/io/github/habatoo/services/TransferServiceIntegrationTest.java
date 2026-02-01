@@ -46,6 +46,7 @@ class TransferServiceIntegrationTest extends BaseTransferTest {
         if (registry.circuitBreaker("transfer-service-cb") != null) {
             registry.circuitBreaker("transfer-service-cb").reset();
         }
+        lenient().when(rateClientService.takeRate(any(Currency.class), any(Currency.class))).thenReturn(BigDecimal.ONE);
     }
 
     @Test
