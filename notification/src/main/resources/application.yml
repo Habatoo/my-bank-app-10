@@ -4,23 +4,6 @@ spring:
 
   config:
     import: "optional:consul:${CONSUL_HOST:localhost}:8500"
-  cloud:
-    consul:
-      host: ${CONSUL_HOST:localhost}
-      port: 8500
-      discovery:
-        prefer-ip-address: true
-        health-check-path: /actuator/health
-        health-check-interval: 10s
-        instance-id: ${spring.application.name}:${random.value}
-      config:
-        enabled: true
-        format: yaml
-        prefixes: [ config ]
-        defaultContext: application
-        watch:
-          enabled: true
-          delay: 1000
 
   r2dbc:
     url: r2dbc:postgresql://${DB_NOTIFICATION_HOST:localhost}:${DB_NOTIFICATION_PORT:5435}/${DB_NOTIFICATION_NAME:notification_db}
@@ -45,11 +28,6 @@ spring:
     user: ${DB_USER_NAME:bank_admin}
     password: ${DB_PASSWORD:bank_password}
     contexts: dev,test,default
-
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: validate
 
   security:
     oauth2:

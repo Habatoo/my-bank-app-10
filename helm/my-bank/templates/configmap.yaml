@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-bank-common-config
+data:
+  DB_ACCOUNT_HOST: "my-bank-account-db"
+  DB_CASH_HOST: "my-bank-cash-db"
+  DB_TRANSFER_HOST: "my-bank-transfer-db"
+  DB_NOTIFICATION_HOST: "my-bank-notification-db"
+
+  DB_ACCOUNT_PORT: "5432"
+  DB_CASH_PORT: "5432"
+  DB_TRANSFER_PORT: "5432"
+  DB_NOTIFICATION_PORT: "5432"
+
+  DB_SCHEMA: "public"
+  DB_USER_NAME: "bank_admin"
+  LIQUIBASE_ENABLED: "true"
+
+  CONSUL_HOST: "consul-server"
+  CONSUL_PORT: "8500"
+
+  KEYCLOAK_HOST: "my-bank-keycloak"
+  KEYCLOAK_PORT: "8082"
+  KEYCLOAK_REALM: "bank"
+
+  NOTIFICATION_SERVICE_URL: "http://notification:8085/api/v1/notification"
+
+  KC_HEALTH_ENABLED: "true"
+  KC_METRICS_ENABLED: "true"
+  KC_BOOTSTRAP_ADMIN_USERNAME: "admin"
+  KC_HOSTNAME_STRICT_HTTPS: "true"
+
+  SPRING_FRONT_UI_PORT: "8081"
+  SPRING_ACCOUNT_PORT: "8083"
+  SPRING_CASH_PORT: "8084"
+  SPRING_NOTIFICATION_PORT: "8085"
+  SPRING_TRANSFER_PORT: "8086"
+  SPRING_GATEWAY_PORT: "8090"

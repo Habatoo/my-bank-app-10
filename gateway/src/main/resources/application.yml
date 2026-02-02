@@ -7,24 +7,6 @@ spring:
   config:
     import: "optional:consul:${CONSUL_HOST:localhost}:8500"
   cloud:
-    consul:
-      host: ${CONSUL_HOST:localhost}
-      port: 8500
-      discovery:
-        enabled: true
-        prefer-ip-address: true
-        health-check-path: /actuator/health
-        health-check-interval: 10s
-        instance-id: ${spring.application.name}:${random.value}
-      config:
-        enabled: true
-        format: yaml
-        prefixes: [ config ]
-        defaultContext: application
-        watch:
-          enabled: true
-          delay: 1000
-
     gateway:
       server:
         webflux:
@@ -90,4 +72,4 @@ spring:
             issuer-uri: http://localhost:8082/realms/bank
 
 server:
-  port: 8090
+  port: ${SPRING_GATEWAY_PORT:8090}

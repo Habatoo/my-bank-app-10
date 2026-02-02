@@ -6,23 +6,6 @@ spring:
     import:
       - "optional:consul:localhost:8500"
       - "optional:classpath:application.yml"
-  cloud:
-    consul:
-      host: ${CONSUL_HOST:localhost}
-      port: 8500
-      discovery:
-        prefer-ip-address: true
-        health-check-path: /actuator/health
-        health-check-interval: 10s
-        instance-id: ${spring.application.name}:${random.value}
-      config:
-        enabled: true
-        format: yaml
-        prefixes: [ config ]
-        defaultContext: application
-        watch:
-          enabled: true
-          delay: 1000
 
   security:
     oauth2:
