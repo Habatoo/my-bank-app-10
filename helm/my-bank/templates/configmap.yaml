@@ -20,8 +20,8 @@ data:
   CONSUL_HOST: "consul-server"
   CONSUL_PORT: "8500"
 
-  KEYCLOAK_HOST: "my-bank-keycloak"
-  KEYCLOAK_PORT: "8082"
+  KEYCLOAK_HOST: "keycloak.dev.svc.cluster.local"
+  KEYCLOAK_PORT: "8080"
   KEYCLOAK_REALM: "bank"
 
   NOTIFICATION_SERVICE_URL: "http://notification:8085/api/v1/notification"
