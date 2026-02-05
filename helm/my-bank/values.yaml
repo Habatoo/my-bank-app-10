@@ -29,3 +29,90 @@ transfer-db:
     password: bank_password
   persistence:
     size: 1Gi
+
+global:
+  db:
+    user: "bank_admin"
+    port: "5432"
+  keycloak:
+    url: "http://keycloak"
+    port: "8080"
+    realm: "bank-realm"
+
+keycloak:
+  service:
+    type: ClusterIP
+    ports:
+      http: 8080
+
+  postgresql:
+    enabled: true
+    image:
+      registry: docker.io
+      repository: bitnamilegacy/postgresql
+      tag: "17.6.0-debian-12-r4"
+
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/keycloak
+    tag: "26.3.3"
+
+  fullnameOverride: keycloak
+
+  auth:
+    adminUser: admin
+    adminPassword: admin
+
+  extraEnvVars:
+    - name: KEYCLOAK_LOG_LEVEL
+      value: "DEBUG"
+    - name: KC_HEALTH_ENABLED
+      value: "true"
+    - name: KC_METRICS_ENABLED
+      value: "true"
+    - name: KC_HTTP_ENABLED
+      value: "true"
+    - name: KC_HOSTNAME_STRICT
+      value: "false"
+    - name: KC_HOSTNAME_STRICT_HTTPS
+      value: "false"
+    - name: KC_PROXY_HEADERS
+      value: "xforwarded"
+    - name: KC_HOSTNAME
+      value: "keycloak.local"
+    - name: KC_IMPORT_STRATEGY
+      value: "OVERWRITE_EXISTING"
+    - name: KEYCLOAK_EXTRA_ARGS
+      value: "--import-realm"
+    - name: KC_HTTP_MANAGEMENT_PORT
+      value: "9000"
+
+  extraVolumes:
+    - name: realm-import-raw
+      configMap:
+        name: keycloak-import
+    - name: realm-import-writable
+      emptyDir: {}
+
+  extraVolumeMounts:
+    - name: realm-import-writable
+      mountPath: /opt/bitnami/keycloak/data/import
+
+  initContainers:
+    - name: prepare-realm
+      image: busybox:1.36
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          set -e
+          echo "Checking source files..."
+          ls -la /cm
+          cp -v /cm/realm.json /opt/bitnami/keycloak/data/import/realm.json || echo "Failed to copy"
+          echo "Final check:"
+          ls -l /opt/bitnami/keycloak/data/import/
+      volumeMounts:
+        - name: realm-import-raw
+          mountPath: /cm
+          readOnly: true
+        - name: realm-import-writable
+          mountPath: /opt/bitnami/keycloak/data/import

@@ -1,0 +1,25 @@
+# keycloak-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-import
+data:
+  realm.json: |-
+{{ .Files.Get "realm-export.json" | indent 4 }}
+  DB_ACCOUNT_HOST: "my-bank-account-db"
+  DB_CASH_HOST: "my-bank-cash-db"
+  DB_TRANSFER_HOST: "my-bank-transfer-db"
+  DB_NOTIFICATION_HOST: "my-bank-notification-db"
+
+  DB_ACCOUNT_PORT: {{ .Values.global.db.port | quote }}
+  DB_CASH_PORT: {{ .Values.global.db.port | quote }}
+  DB_TRANSFER_PORT: {{ .Values.global.db.port | quote }}
+  DB_NOTIFICATION_PORT: {{ .Values.global.db.port | quote }}
+
+  DB_SCHEMA: "public"
+  DB_USER_NAME: {{ .Values.global.db.user | quote }}
+  LIQUIBASE_ENABLED: "true"
+
+  KEYCLOAK_HOST:  {{ .Values.global.keycloak.url | quote }}
+  KEYCLOAK_PORT:  {{ .Values.global.keycloak.port | quote }}
+  KEYCLOAK_REALM:  {{ .Values.global.keycloak.realm | quote }}

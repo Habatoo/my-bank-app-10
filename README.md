@@ -86,14 +86,46 @@ my-bank-app/
 2. Сборка и запуск
 
 ```bash
+minikube delete
+minikube start --driver=docker --memory=8g --cpus=4
+minikube addons enable ingress
+kubectl create namespace dev
+
+helm upgrade --install bank-dev . -n dev
+
+kubectl get pods -n dev
+
+helm upgrade --install my-bank . -n dev
+
+
 
 minikube start
 minikube addons enable ingress
 
+kubectl delete pvc keycloak-data -n dev
+kubectl delete pod -l app=keycloak -n dev
+helm upgrade --install my-bank . -n dev
+
 kubectl create namespace dev
 
-helm install my-bank
 helm install my-bank . -n dev
+
+kubectl get pods -n dev
+
+minikube tunnel
+kubectl port-forward -n dev svc/my-bank-account-db 5432:5432
+kubectl port-forward -n dev svc/my-bank-cash-db 5433:5432
+kubectl port-forward -n dev svc/my-bank-transfer-db 5434:5432
+kubectl port-forward -n dev svc/my-bank-notification-db 5435:5432
+
+kubectl port-forward -n dev svc/keycloak 8080:8080
+
+kubectl edit pvc keycloak-data -n dev
+В открывшемся редакторе ищем блок finalizers: и вручную удаляем его строку
+
+Сохраняем файл (:wq в vim)
+
+PVC сразу перейдет в статус Deleted
 ```
    
 

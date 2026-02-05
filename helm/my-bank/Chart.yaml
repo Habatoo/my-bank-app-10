@@ -24,3 +24,8 @@ dependencies:
     version: 0.1.0
     repository: "file://charts/postgres-db"
     alias: transfer-db
+
+  - name: keycloak
+    version: "25.2.0"
+    repository: "file://charts/keycloak"
+    alias: keycloak
