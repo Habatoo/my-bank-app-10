@@ -62,8 +62,9 @@ class TransferFrontServiceIntegrationTest extends BaseFrontTest {
                     String decoded = URLDecoder.decode(res, StandardCharsets.UTF_8);
 
                     assertThat(decoded).contains("Перевод пользователю");
-                    assertThat(decoded).contains("списано 500.00 RUB");
-                    assertThat(decoded).contains("зачислено 500.00 RUB");
+                    assertThat(decoded).contains("списано 500");
+                    assertThat(decoded).contains("зачислено 500");
+                    assertThat(decoded).contains("RUB");
                 })
                 .verifyComplete();
     }

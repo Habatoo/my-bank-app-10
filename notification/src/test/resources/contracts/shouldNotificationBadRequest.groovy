@@ -10,6 +10,7 @@ Contract.make {
         url '/notification'
         headers {
             contentType(applicationJson())
+            header('Authorization', 'Bearer dummy-token')
         }
         body(
                 username: '',

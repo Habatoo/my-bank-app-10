@@ -11,10 +11,24 @@ import io.github.habatoo.services.UserFrontService;
 import io.restassured.module.webtestclient.RestAssuredWebTestClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
+import org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration;
+import org.springframework.boot.autoconfigure.r2dbc.R2dbcTransactionManagerAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.oauth2.client.reactive.ReactiveOAuth2ClientAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.contract.verifier.messaging.boot.AutoConfigureMessageVerifier;
 import org.springframework.context.ApplicationContext;
+import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.server.ServerOAuth2AuthorizedClientRepository;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestConstructor;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.result.view.RedirectView;
@@ -32,10 +46,32 @@ import static org.springframework.security.test.web.reactive.server.SecurityMock
         classes = {
                 FrontApplication.class,
                 TestSecurityConfiguration.class
+        },
+        properties = {
+                "spring.cloud.consul.enabled=false",
+                "spring.cloud.consul.config.enabled=false",
+                "spring.cloud.compatibility-verifier.enabled=false",
+                "spring.main.allow-bean-definition-overriding=true",
+                "spring.liquibase.enabled=false",
+                "spring.security.enabled=false",
+                "spring.security.oauth2.client.registration.keycloak.enabled=false",
+                "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration,org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration,org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration"
         }
 )
+@EnableAutoConfiguration(exclude = {
+        ReactiveSecurityAutoConfiguration.class,
+        ReactiveOAuth2ClientAutoConfiguration.class,
+        OAuth2ClientAutoConfiguration.class,
+        HibernateJpaAutoConfiguration.class,
+        DataSourceAutoConfiguration.class,
+        DataSourceTransactionManagerAutoConfiguration.class,
+        R2dbcAutoConfiguration.class,
+        R2dbcTransactionManagerAutoConfiguration.class
+})
 @ActiveProfiles("test")
+@TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
 @AutoConfigureMessageVerifier
+@AutoConfigureWebTestClient
 public abstract class BaseContractTest {
 
     @MockitoBean
@@ -53,10 +89,25 @@ public abstract class BaseContractTest {
     @Autowired
     private ApplicationContext context;
 
+    @MockitoBean
+    private ReactiveClientRegistrationRepository reactiveClientRegistrationRepository;
+
+    @MockitoBean
+    private ReactiveOAuth2AuthorizedClientService reactiveOAuth2AuthorizedClientService;
+
+    @MockitoBean
+    private ServerOAuth2AuthorizedClientRepository serverOAuth2AuthorizedClientRepository;
+
+    @Autowired
     protected WebTestClient webTestClient;
 
     @BeforeEach
     void setup() {
+        setupServiceMocks();
+        RestAssuredWebTestClient.webTestClient(webTestClient);
+    }
+
+    private void setupServiceMocks() {
         when(cashFrontService.moveMoney(any(CashDto.class)))
                 .thenReturn(Mono.just("redirect:/main?info=success"));
         when(transferFrontService.sendMoney(any(TransferDto.class)))
@@ -79,7 +130,5 @@ public abstract class BaseContractTest {
                                 .subject("367c3cf3-af3e-44af-ab7b-6d2034c6fca6")
                                 .claim("preferred_username", "user1")
                         ));
-
-        RestAssuredWebTestClient.webTestClient(webTestClient);
     }
 }

@@ -5,7 +5,7 @@ import org.springframework.cloud.contract.spec.Contract
 Contract.make {
     description "Успешное изменение пароля"
     request {
-        method 'PATCH'
+        method 'POST'
         urlPath('/password')
         headers {
             header('Authorization', 'Bearer dummy-token')

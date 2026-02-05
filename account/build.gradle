@@ -76,6 +76,7 @@ dependencies {
     accountIntegrationTestImplementation 'io.micrometer:micrometer-test'
     accountIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
     accountIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-contract-verifier'
+    accountIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-contract-wiremock'
 }
 
 tasks.withType(JavaCompile).configureEach {

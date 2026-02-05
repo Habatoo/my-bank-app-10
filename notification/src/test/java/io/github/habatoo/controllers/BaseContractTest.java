@@ -6,10 +6,22 @@ import io.github.habatoo.dto.NotificationEvent;
 import io.github.habatoo.dto.enums.EventStatus;
 import io.github.habatoo.dto.enums.EventType;
 import io.github.habatoo.repositories.NotificationRepository;
+import io.github.habatoo.repositories.OutboxRepository;
+import io.github.habatoo.services.NotificationClientService;
 import io.github.habatoo.services.NotificationService;
 import io.restassured.module.webtestclient.RestAssuredWebTestClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
+import org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration;
+import org.springframework.boot.autoconfigure.r2dbc.R2dbcTransactionManagerAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.oauth2.client.reactive.ReactiveOAuth2ClientAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.contract.verifier.messaging.boot.AutoConfigureMessageVerifier;
 import org.springframework.context.ApplicationContext;
@@ -17,8 +29,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.server.ServerOAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestConstructor;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.ResponseStatusException;
@@ -34,16 +48,42 @@ import static org.springframework.security.test.web.reactive.server.SecurityMock
         classes = {
                 NotificationApplication.class,
                 TestSecurityConfiguration.class
+        },
+        properties = {
+                "spring.cloud.consul.enabled=false",
+                "spring.cloud.consul.config.enabled=false",
+                "spring.cloud.compatibility-verifier.enabled=false",
+                "spring.main.allow-bean-definition-overriding=true",
+                "spring.liquibase.enabled=false",
+                "spring.security.enabled=false",
+                "spring.security.oauth2.client.registration.keycloak.enabled=false",
+                "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration,org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration,org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration"
         }
 )
+@EnableAutoConfiguration(exclude = {
+        ReactiveSecurityAutoConfiguration.class,
+        ReactiveOAuth2ClientAutoConfiguration.class,
+        OAuth2ClientAutoConfiguration.class,
+        HibernateJpaAutoConfiguration.class,
+        DataSourceAutoConfiguration.class,
+        DataSourceTransactionManagerAutoConfiguration.class,
+        R2dbcAutoConfiguration.class,
+        R2dbcTransactionManagerAutoConfiguration.class
+})
 @ActiveProfiles("test")
+@TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
 @AutoConfigureMessageVerifier
+@AutoConfigureWebTestClient
 public abstract class BaseContractTest {
 
     @Autowired
     protected ApplicationContext context;
 
+    @Autowired
     protected WebTestClient webTestClient;
+
+    @MockitoBean
+    private OutboxRepository outboxRepository;
 
     @MockitoBean
     private NotificationService notificationService;
@@ -52,16 +92,21 @@ public abstract class BaseContractTest {
     private NotificationRepository notificationRepository;
 
     @MockitoBean
-    private ReactiveClientRegistrationRepository clientRegistrationRepository;
+    private ReactiveClientRegistrationRepository reactiveClientRegistrationRepository;
 
     @MockitoBean
-    private ReactiveOAuth2AuthorizedClientService authorizedClientService;
+    private ReactiveOAuth2AuthorizedClientService reactiveOAuth2AuthorizedClientService;
 
     @MockitoBean
-    private ReactiveJwtDecoder reactiveJwtDecoder;
+    private ServerOAuth2AuthorizedClientRepository serverOAuth2AuthorizedClientRepository;
 
     @BeforeEach
     void setup() {
+        setupServiceMocks();
+        RestAssuredWebTestClient.webTestClient(webTestClient);
+    }
+
+    private void setupServiceMocks() {
         when(notificationRepository.save(any())).thenAnswer(i -> Mono.just(i.getArgument(0)));
 
         when(notificationService.processEvent(any(NotificationEvent.class)))
@@ -87,16 +132,5 @@ public abstract class BaseContractTest {
 
                     return Mono.empty();
                 });
-
-        webTestClient = WebTestClient
-                .bindToApplicationContext(context)
-                .apply(springSecurity())
-                .configureClient()
-                .build()
-                .mutateWith(mockJwt()
-                        .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))
-                );
-
-        RestAssuredWebTestClient.webTestClient(webTestClient);
     }
 }
