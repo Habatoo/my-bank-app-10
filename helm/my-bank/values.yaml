@@ -92,27 +92,41 @@ keycloak:
       configMap:
         name: keycloak-import
     - name: realm-import-writable
-      emptyDir: {}
+      emptyDir: { }
+    - name: custom-theme-source
+      configMap:
+        name: keycloak-theme
 
   extraVolumeMounts:
     - name: realm-import-writable
       mountPath: /opt/bitnami/keycloak/data/import
+    - name: custom-theme-source
+      mountPath: /opt/bitnami/keycloak/themes/bank-theme/login/login.ftl
+      subPath: login.ftl
+    - name: custom-theme-source
+      mountPath: /opt/bitnami/keycloak/themes/bank-theme/login/register.ftl
+      subPath: register.ftl
+    - name: custom-theme-source
+      mountPath: /opt/bitnami/keycloak/themes/bank-theme/login/theme.properties
+      subPath: theme.properties
+    - name: custom-theme-source
+      mountPath: /opt/bitnami/keycloak/themes/bank-theme/login/resources/css/style.css
+      subPath: style.css
 
   initContainers:
     - name: prepare-realm
       image: busybox:1.36
-      command: ["/bin/sh", "-c"]
+      command: [ "/bin/sh", "-c" ]
       args:
         - |
           set -e
-          echo "Checking source files..."
-          ls -la /cm
-          cp -v /cm/realm.json /opt/bitnami/keycloak/data/import/realm.json || echo "Failed to copy"
-          echo "Final check:"
-          ls -l /opt/bitnami/keycloak/data/import/
+          echo "Copying realm files..."
+          cp -v /cm/*.json /opt/bitnami/keycloak/data/import/ || echo "No json found"
       volumeMounts:
         - name: realm-import-raw
           mountPath: /cm
-          readOnly: true
         - name: realm-import-writable
           mountPath: /opt/bitnami/keycloak/data/import
+
+  persistence:
+    deployPostgresql: true
