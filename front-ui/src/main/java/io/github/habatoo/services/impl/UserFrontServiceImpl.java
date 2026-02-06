@@ -46,7 +46,8 @@ public class UserFrontServiceImpl implements UserFrontService {
                     String name = formData.getFirst("name");
                     String birthdate = formData.getFirst("birthdate");
 
-                    if (name == null || birthdate == null) return Mono.just(errorRedirect("Данные не заполнены"));
+                    if (name == null || birthdate == null || birthdate.isBlank()) return Mono.just(
+                            errorRedirect("Данные не заполнены"));
 
                     return webClient.patch()
                             .uri(getApiUrl("api/account/update"))

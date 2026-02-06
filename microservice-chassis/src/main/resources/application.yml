@@ -19,6 +19,8 @@ spring:
         health-check-path: /actuator/health/readiness
         health-check-interval: 10s
         instance-id: ${spring.application.name}:${random.value}
+        ip-address: localhost
+        register: true
       config:
         enabled: true
         format: yaml

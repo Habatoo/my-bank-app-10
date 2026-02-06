@@ -19,7 +19,7 @@ spring:
             scope: openid,profile,email
         provider:
           keycloak:
-            issuer-uri: http://localhost:8082/realms/bank
+            issuer-uri: http://keycloak.local/realms/bank
 
 server:
   port: ${SPRING_FRONT_UI_PORT:8081}

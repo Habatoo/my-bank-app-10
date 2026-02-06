@@ -58,7 +58,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://${KEYCLOAK_HOST:localhost}:8082/realms/${KEYCLOAK_REALM:bank}/protocol/openid-connect/certs
+          jwk-set-uri: http://keycloak.local/realms/bank/protocol/openid-connect/certs
       client:
         registration:
           keycloak:
@@ -69,7 +69,7 @@ spring:
             scope: openid,profile,email
         provider:
           keycloak:
-            issuer-uri: http://localhost:8082/realms/bank
+            issuer-uri: http://keycloak.local/realms/bank
 
 server:
   port: ${SPRING_GATEWAY_PORT:8090}
