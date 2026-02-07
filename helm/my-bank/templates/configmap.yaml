@@ -13,4 +13,4 @@ data:
   DB_PORT: "5432"
 
   NOTIFICATION_URL: "http://notification/notification"
-  GATEWAY_HOST: "http://gateway"
+  GATEWAY_HOST: "http://gateway:8080"

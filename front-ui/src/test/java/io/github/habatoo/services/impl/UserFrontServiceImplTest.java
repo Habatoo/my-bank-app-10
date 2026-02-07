@@ -73,8 +73,6 @@ class UserFrontServiceImplTest {
         lenient().when(requestBodySpec.bodyValue(any())).thenReturn(requestHeadersSpec);
         lenient().when(requestBodySpec.retrieve()).thenReturn(responseSpec);
         lenient().when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-
-        ReflectionTestUtils.setField(userService, "gatewayHost", "http://localhost:8080");
     }
 
     @Test

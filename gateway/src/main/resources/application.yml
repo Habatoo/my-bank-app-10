@@ -6,6 +6,12 @@ spring:
 
   cloud:
     gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
       server:
         webflux:
           discovery:
@@ -75,10 +81,3 @@ spring:
         provider:
           keycloak:
             issuer-uri: http://keycloak/realms/bank
-
-logging:
-  level:
-    org.springframework.cloud.gateway: TRACE
-    org.springframework.http.server.reactive: DEBUG
-    org.springframework.web.reactive: DEBUG
-    reactor.netty.http.server: DEBUG

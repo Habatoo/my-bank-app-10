@@ -10,16 +10,13 @@ import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOper
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -34,9 +31,6 @@ public class TransferFrontServiceImpl implements TransferFrontService {
     private final WebClient webClient;
     private final CircuitBreakerRegistry registry;
     private final RateClientService rateClientService;
-
-    @Value("${spring.application.gateway.host:http://gateway}")
-    private String gatewayHost;
 
     /**
      * {@inheritDoc}
@@ -53,7 +47,8 @@ public class TransferFrontServiceImpl implements TransferFrontService {
     @Override
     public Mono<String> sendMoneyToSelf(TransferDto transferDto) {
         if (transferDto.getFromCurrency() == transferDto.getToCurrency()) {
-            return Mono.just("redirect:/main?info=" + URLEncoder.encode("Счета совпадают, баланс не изменился", StandardCharsets.UTF_8));
+            return Mono.just("redirect:/main?info=" + URLEncoder.encode(
+                    "Счета совпадают, баланс не изменился", StandardCharsets.UTF_8));
         }
         return executeTransfer(transferDto, "/api/main/self-transfer", "Внутренний перевод");
     }
@@ -67,7 +62,7 @@ public class TransferFrontServiceImpl implements TransferFrontService {
             String[] parts = rawLogin.split(":");
             dto.setLogin(parts[0]);
             try {
-                dto.setToCurrency(Currency.valueOf(parts[1]));
+                dto.setToCurrency(Currency.valueOf(parts[1].toUpperCase()));
             } catch (IllegalArgumentException e) {
                 log.error("Некорректная валюта в данных формы: {}", parts[1]);
                 dto.setToCurrency(dto.getFromCurrency());
@@ -82,7 +77,7 @@ public class TransferFrontServiceImpl implements TransferFrontService {
      */
     private Mono<String> executeTransfer(TransferDto dto, String path, String prefix) {
         return webClient.post()
-                .uri(uriBuilder -> getUri(path, uriBuilder))
+                .uri(uriBuilder -> uriBuilder.path(path).build())
                 .bodyValue(dto)
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<OperationResultDto<TransferDto>>() {
@@ -93,8 +88,9 @@ public class TransferFrontServiceImpl implements TransferFrontService {
     }
 
     private @NotNull Mono<String> getError(Throwable e) {
-        log.error("Ошибка: {}", e.getMessage());
-        return Mono.just("redirect:/main?error=" + URLEncoder.encode("Сервис недоступен", StandardCharsets.UTF_8));
+        log.error("Системная ошибка при выполнении перевода: {}", e.getMessage());
+        return Mono.just("redirect:/main?error=" + URLEncoder.encode(
+                "Сервис переводов недоступен", StandardCharsets.UTF_8));
     }
 
     private @NotNull String getTransferResult(
@@ -111,16 +107,5 @@ public class TransferFrontServiceImpl implements TransferFrontService {
             return "redirect:/main?info=" + URLEncoder.encode(msg, StandardCharsets.UTF_8);
         }
         return "redirect:/main?error=" + URLEncoder.encode(result.getMessage(), StandardCharsets.UTF_8);
-    }
-
-    private @NotNull URI getUri(String path, UriBuilder uriBuilder) {
-        URI baseUri = URI.create(gatewayHost);
-
-        return uriBuilder
-                .scheme(baseUri.getScheme())
-                .host(baseUri.getHost())
-                .port(baseUri.getPort())
-                .path(path)
-                .build();
     }
 }

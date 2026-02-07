@@ -1,6 +1,8 @@
 spring:
   application:
     name: front-ui
+  gateway:
+    host: ${GATEWAY_HOST:http://gateway:8080}
 
   config:
     import:

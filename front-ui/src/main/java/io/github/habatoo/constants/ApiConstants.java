@@ -16,7 +16,7 @@ public final class ApiConstants {
      * Базовый URL сетевого шлюза (Gateway) для обращения к микросервисам через API.
      * Используется внутри внутренней сети Docker для маршрутизации запросов.
      */
-    public static final String BASE_GATEWAY_URL = "http://gateway/api";
+    public static final String BASE_GATEWAY_URL = "http://gateway:8080";
 
     /**
      * Приватный конструктор для запрета инициализации утилитарного класса.

@@ -8,19 +8,14 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.result.view.RedirectView;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebSession;
-import org.springframework.web.util.UriBuilder;
-import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
-import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -36,9 +31,6 @@ public class UserFrontServiceImpl implements UserFrontService {
     private final WebClient webClient;
     private final CircuitBreakerRegistry registry;
 
-    @Value("${spring.application.gateway.host:http://gateway}")
-    private String gatewayHost;
-
     @Override
     public Mono<RedirectView> updateProfile(ServerWebExchange exchange) {
         return exchange.getFormData()
@@ -46,17 +38,21 @@ public class UserFrontServiceImpl implements UserFrontService {
                     String name = formData.getFirst("name");
                     String birthdate = formData.getFirst("birthdate");
 
-                    if (name == null || birthdate == null || birthdate.isBlank()) return Mono.just(
-                            errorRedirect("Данные не заполнены"));
+                    if (name == null || birthdate == null || birthdate.isBlank()) {
+                        return Mono.just(errorRedirect("Данные не заполнены"));
+                    }
 
                     return webClient.patch()
-                            .uri(getApiUrl("api/account/update"))
+                            .uri("/api/account/update")
                             .bodyValue(new UserUpdateDto(name, LocalDate.parse(birthdate)))
                             .retrieve()
                             .toBodilessEntity()
                             .transformDeferred(CircuitBreakerOperator.of(registry.circuitBreaker("gateway-cb")))
                             .thenReturn(infoRedirect("Профиль обновлен"))
-                            .onErrorResume(e -> Mono.just(errorRedirect("Ошибка обновления")));
+                            .onErrorResume(e -> {
+                                log.error("Ошибка обновления профиля: {}", e.getMessage());
+                                return Mono.just(errorRedirect("Ошибка обновления"));
+                            });
                 });
     }
 
@@ -72,7 +68,7 @@ public class UserFrontServiceImpl implements UserFrontService {
                     }
 
                     return webClient.post()
-                            .uri(getApiUrl("api/account/password"))
+                            .uri("/api/account/password")
                             .bodyValue(new PasswordUpdateDto(password, confirm))
                             .retrieve()
                             .bodyToMono(Boolean.class)
@@ -93,7 +89,10 @@ public class UserFrontServiceImpl implements UserFrontService {
                     log.debug("Отправка запроса на открытие счета. Валюта: {}", currency);
 
                     return webClient.post()
-                            .uri(uriBuilder -> getUri(uriBuilder, currency))
+                            .uri(uriBuilder -> uriBuilder
+                                    .path("/api/account/open-account")
+                                    .queryParam("currency", currency)
+                                    .build())
                             .retrieve()
                             .bodyToMono(new ParameterizedTypeReference<OperationResultDto<Void>>() {
                             })
@@ -102,13 +101,13 @@ public class UserFrontServiceImpl implements UserFrontService {
                                     ? infoRedirect("Счет в " + currency + " открыт")
                                     : errorRedirect(res.getMessage()))
                             .onErrorResume(e -> {
-                                log.error("Ошибка при вызове микросервиса account: {}", e.getMessage());
+                                log.error("Ошибка при открытии счета: {}", e.getMessage());
                                 return Mono.just(errorRedirect("Ошибка при открытии счета"));
                             });
                 });
     }
 
-    private @NotNull Mono<RedirectView> getRedirectView(ServerWebExchange exchange, Boolean success) {
+    private Mono<RedirectView> getRedirectView(ServerWebExchange exchange, Boolean success) {
         if (Boolean.TRUE.equals(success)) {
             log.info("Пароль успешно изменен, завершаем сессию.");
             return exchange.getSession()
@@ -119,22 +118,6 @@ public class UserFrontServiceImpl implements UserFrontService {
         }
     }
 
-    private @NotNull URI getUri(UriBuilder uriBuilder, String currency) {
-        URI baseUri = URI.create(gatewayHost);
-        return uriBuilder
-                .scheme(baseUri.getScheme())
-                .host(baseUri.getHost())
-                .port(baseUri.getPort())
-                .path("/api/account/open-account")
-                .queryParam("currency", currency)
-                .build();
-    }
-
-    private String getApiUrl(String path) {
-        return UriComponentsBuilder.fromUriString(gatewayHost)
-                .path(path)
-                .toUriString();
-    }
 
     private RedirectView infoRedirect(String msg) {
         return new RedirectView("/main?info=" + URLEncoder.encode(msg, StandardCharsets.UTF_8));

@@ -80,6 +80,10 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 jar {
+    enabled = false
+}
+
+bootJar {
     enabled = true
     archiveClassifier = ''
 }

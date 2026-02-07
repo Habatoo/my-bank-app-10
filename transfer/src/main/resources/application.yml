@@ -1,6 +1,8 @@
 spring:
   application:
     name: transfer
+    gateway:
+      host: ${GATEWAY_HOST:http://account:8080}
 
   r2dbc:
     url: r2dbc:postgresql://${DB_TRANSFER_HOST:localhost}:${DB_TRANSFER_PORT:5432}/${DB_TRANSFER_NAME:transfer_db}

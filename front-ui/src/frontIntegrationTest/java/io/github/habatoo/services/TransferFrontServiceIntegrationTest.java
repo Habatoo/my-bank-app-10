@@ -83,7 +83,7 @@ class TransferFrontServiceIntegrationTest extends BaseFrontTest {
                 .assertNext(res -> {
                     assertThat(res).contains("redirect:/main?error=");
                     String decoded = URLDecoder.decode(res, StandardCharsets.UTF_8);
-                    assertThat(decoded).contains("Сервис недоступен");
+                    assertThat(decoded).contains("Сервис переводов недоступен");
                 })
                 .verifyComplete();
 
@@ -103,7 +103,7 @@ class TransferFrontServiceIntegrationTest extends BaseFrontTest {
                 .assertNext(res -> {
                     assertThat(res).contains("redirect:/main?error=");
                     String decoded = URLDecoder.decode(res, StandardCharsets.UTF_8);
-                    assertThat(decoded).contains("Сервис недоступен");
+                    assertThat(decoded).contains("Сервис переводов недоступен");
                 })
                 .verifyComplete();
     }

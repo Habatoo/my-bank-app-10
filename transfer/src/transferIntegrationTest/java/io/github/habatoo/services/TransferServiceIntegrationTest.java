@@ -41,7 +41,6 @@ class TransferServiceIntegrationTest extends BaseTransferTest {
                 .build();
 
         ReflectionTestUtils.setField(transferService, "webClient", localWebClient);
-        ReflectionTestUtils.setField(transferService, "gatewayHost", localHost);
 
         if (registry.circuitBreaker("transfer-service-cb") != null) {
             registry.circuitBreaker("transfer-service-cb").reset();

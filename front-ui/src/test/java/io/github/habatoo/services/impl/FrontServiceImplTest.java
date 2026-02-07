@@ -73,7 +73,6 @@ class FrontServiceImplTest {
         when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
         lenient().when(rateClientService.takeRate(any(Currency.class), any(Currency.class))).thenReturn(BigDecimal.ONE);
-        ReflectionTestUtils.setField(frontService, "gatewayHost", "http://localhost:8080");
     }
 
     @Test

@@ -1,5 +1,6 @@
 package io.github.habatoo.configurations;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
@@ -31,9 +32,10 @@ public class WebClientChassisAutoConfiguration {
     @Bean
     public WebClient webClient(WebClient.Builder loadBalancedWebClientBuilder,
                                ReactiveClientRegistrationRepository clientRegistrations,
-                               ServerOAuth2AuthorizedClientRepository authorizedClients) {
-
+                               ServerOAuth2AuthorizedClientRepository authorizedClients,
+                               @Value("${spring.gateway.host:${GATEWAY_HOST:http://gateway:8080}}") String baseUrl) {
         return loadBalancedWebClientBuilder
+                .baseUrl(baseUrl)
                 .filter(createOauthFilter(clientRegistrations, authorizedClients))
                 .build();
     }

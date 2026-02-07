@@ -15,17 +15,13 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -42,9 +38,6 @@ public class TransferServiceImpl implements TransferService {
     private final OutboxClientService outboxClientService;
     private final RateClientService rateClientService;
     private final CircuitBreakerRegistry registry;
-
-    @Value("${spring.application.gateway.host:http://gateway}")
-    private String gatewayHost;
 
     /**
      * {@inheritDoc}
@@ -102,22 +95,15 @@ public class TransferServiceImpl implements TransferService {
 
     private Mono<OperationResultDto<Void>> callAccountService(String login, BigDecimal amt, String cur) {
         return webClient.post()
-                .uri(u -> getUri(login, amt, cur, u))
+                .uri(u -> u.path("/api/account/balance")
+                        .queryParam("login", login)
+                        .queryParam("amount", amt)
+                        .queryParam("currency", cur)
+                        .build())
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<OperationResultDto<Void>>() {
                 })
                 .transformDeferred(CircuitBreakerOperator.of(registry.circuitBreaker("transfer-service-cb")));
-    }
-
-    private @NotNull URI getUri(String login, BigDecimal amt, String cur, UriBuilder u) {
-        URI baseUri = URI.create(gatewayHost);
-        return u.scheme(baseUri.getScheme())
-                .host(baseUri.getHost())
-                .port(baseUri.getPort())
-                .path("/api/account/balance")
-                .queryParam("login", login)
-                .queryParam("amount", amt)
-                .queryParam("currency", cur).build();
     }
 
     private Mono<Void> sendNotify(

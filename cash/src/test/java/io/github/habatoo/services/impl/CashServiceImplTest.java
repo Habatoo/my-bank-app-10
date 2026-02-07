@@ -37,6 +37,7 @@ import static org.mockito.Mockito.*;
  * Проверяет бизнес-логику проведения платежей, сохранение в историю,
  * работу с Outbox и механизм компенсации при ошибках БД.
  */
+@SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Юнит-тесты сервиса CashServiceImpl")
 class CashServiceImplTest {

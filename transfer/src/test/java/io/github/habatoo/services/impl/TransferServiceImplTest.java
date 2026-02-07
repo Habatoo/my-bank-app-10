@@ -19,7 +19,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -34,6 +33,7 @@ import static org.mockito.Mockito.*;
  * Модульные тесты для сервиса {@link TransferServiceImpl}.
  * Проверяют бизнес-логику переводов, включая сценарии компенсации при сбоях.
  */
+@SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Тестирование логики переводов (TransferServiceImpl)")
 class TransferServiceImplTest {
@@ -73,8 +73,6 @@ class TransferServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(transferService, "gatewayHost", "http://gateway");
-
         transferDto = TransferDto.builder()
                 .login(RECIPIENT)
                 .value(AMOUNT)

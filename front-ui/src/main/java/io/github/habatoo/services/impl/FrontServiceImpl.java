@@ -10,11 +10,9 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.result.view.Rendering;
-import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
@@ -33,9 +31,6 @@ public class FrontServiceImpl implements FrontService {
     private final WebClient webClient;
     private final RateClientService rateClientService;
     private final CircuitBreakerRegistry registry;
-
-    @Value("${spring.application.gateway.host:http://gateway}")
-    private String gatewayHost;
 
     @Override
     public Mono<Rendering> showMainPage(String info, String error) {
@@ -69,7 +64,7 @@ public class FrontServiceImpl implements FrontService {
      */
     private Mono<UserProfileResponseDto> fetchUserProfile() {
         return webClient.get()
-                .uri(getApiUrl("/api/main/user"))
+                .uri("/api/main/user")
                 .retrieve()
                 .bodyToMono(UserProfileResponseDto.class)
                 .transformDeferred(CircuitBreakerOperator.of(registry.circuitBreaker("accountServiceCB")))
@@ -81,7 +76,7 @@ public class FrontServiceImpl implements FrontService {
      */
     private Mono<List<AccountShortDto>> fetchOtherUsers() {
         return webClient.get()
-                .uri(getApiUrl("/api/main/users"))
+                .uri("/api/main/users")
                 .retrieve()
                 .bodyToFlux(AccountShortDto.class)
                 .transformDeferred(CircuitBreakerOperator.of(registry.circuitBreaker("accountServiceCB")))
@@ -96,7 +91,6 @@ public class FrontServiceImpl implements FrontService {
         if (accounts == null || accounts.isEmpty()) {
             return BigDecimal.ZERO;
         }
-
         return accounts.stream()
                 .map(acc -> calcAmount(acc.getBalance(), acc.getCurrency(), Currency.RUB))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
@@ -108,7 +102,6 @@ public class FrontServiceImpl implements FrontService {
      */
     private BigDecimal calcAmount(BigDecimal value, Currency fromCurrency, Currency toCurrency) {
         if (value == null) return BigDecimal.ZERO;
-
         try {
             BigDecimal rate = rateClientService.takeRate(fromCurrency, toCurrency);
             return rate.multiply(value);
@@ -116,11 +109,5 @@ public class FrontServiceImpl implements FrontService {
             log.warn("Не удалось получить курс для {} -> {}: {}", fromCurrency, toCurrency, e.getMessage());
             return fromCurrency == toCurrency ? value : BigDecimal.ZERO;
         }
-    }
-
-    private String getApiUrl(String path) {
-        return UriComponentsBuilder.fromUriString(gatewayHost)
-                .path(path)
-                .toUriString();
     }
 }

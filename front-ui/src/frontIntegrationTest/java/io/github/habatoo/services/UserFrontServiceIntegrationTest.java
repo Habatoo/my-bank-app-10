@@ -36,7 +36,6 @@ class UserFrontServiceIntegrationTest extends BaseFrontTest {
                 .build();
 
         ReflectionTestUtils.setField(userFrontService, "webClient", localWebClient);
-        ReflectionTestUtils.setField(userFrontService, "gatewayHost", "http://localhost:" + mockWebServer.getPort());
     }
 
     @Test

@@ -3,6 +3,7 @@ package io.github.habatoo.services;
 import io.github.habatoo.BaseFrontTest;
 import io.github.habatoo.dto.AccountShortDto;
 import io.github.habatoo.dto.UserProfileResponseDto;
+import io.github.habatoo.services.impl.FrontServiceImpl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.QueueDispatcher;
@@ -57,6 +58,11 @@ class FrontServiceIntegrationTest extends BaseFrontTest {
     @Test
     @DisplayName("showMainPage: Успешная загрузка данных")
     void showMainPageSuccessTest() {
+        WebClient webClient = WebClient.builder()
+                .baseUrl(mockWebServer.url("/").toString())
+                .build();
+
+        frontService = new FrontServiceImpl(webClient, rateClientService, registry);
         UserProfileResponseDto profile = new UserProfileResponseDto();
         profile.setName("Ivan");
         profile.setLogin("ivan_cool");
@@ -67,20 +73,16 @@ class FrontServiceIntegrationTest extends BaseFrontTest {
         mockWebServer.setDispatcher(new Dispatcher() {
             @Override
             public MockResponse dispatch(RecordedRequest request) {
-                try {
-                    if (request.getPath().contains("/main/user")) {
-                        return new MockResponse()
-                                .setResponseCode(200)
-                                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                                .setBody(objectMapper.writeValueAsString(profile));
-                    } else if (request.getPath().contains("/main/users")) {
-                        return new MockResponse()
-                                .setResponseCode(200)
-                                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                                .setBody(objectMapper.writeValueAsString(List.of(otherUser)));
-                    }
-                } catch (Exception e) {
-                    return new MockResponse().setResponseCode(500);
+                if (request.getPath().equals("/api/main/user")) {
+                    return new MockResponse()
+                            .setResponseCode(200)
+                            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                            .setBody(toJson(profile));
+                } else if (request.getPath().equals("/api/main/users")) {
+                    return new MockResponse()
+                            .setResponseCode(200)
+                            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                            .setBody(toJson(List.of(otherUser)));
                 }
                 return new MockResponse().setResponseCode(404);
             }
@@ -88,9 +90,8 @@ class FrontServiceIntegrationTest extends BaseFrontTest {
 
         StepVerifier.create(frontService.showMainPage("some info", null))
                 .assertNext(rendering -> {
-                    Map<String, Object> model = rendering.modelAttributes();
-                    assertThat(model.get("name")).isEqualTo("Ivan");
-                    assertThat((List<?>) model.get("accounts")).hasSize(1);
+                    assertThat(rendering.modelAttributes().get("name")).isEqualTo("Ivan");
+                    assertThat((List<?>) rendering.modelAttributes().get("accounts")).hasSize(1);
                 })
                 .verifyComplete();
     }
@@ -125,5 +126,13 @@ class FrontServiceIntegrationTest extends BaseFrontTest {
                     assertThat((List<String>) model.get("errors")).contains("Сервис временно недоступен");
                 })
                 .verifyComplete();
+    }
+
+    private String toJson(Object obj) {
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

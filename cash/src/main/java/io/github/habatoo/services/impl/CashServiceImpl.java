@@ -111,11 +111,12 @@ public class CashServiceImpl implements CashService {
     private Mono<OperationResultDto<Void>> callAccountService(String login, BigDecimal amt, String cur) {
         CircuitBreaker cb = registry.circuitBreaker("cashServiceCB");
         return webClient.post()
-                .uri(u -> u.host("gateway")
+                .uri(uriBuilder -> uriBuilder
                         .path("/api/account/balance")
                         .queryParam("login", login)
                         .queryParam("amount", amt)
-                        .queryParam("currency", cur).build())
+                        .queryParam("currency", cur)
+                        .build())
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<OperationResultDto<Void>>() {})
                 .transformDeferred(CircuitBreakerOperator.of(cb));

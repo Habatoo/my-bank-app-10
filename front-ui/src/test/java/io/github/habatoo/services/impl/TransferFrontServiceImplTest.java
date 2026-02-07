@@ -187,7 +187,7 @@ class TransferFrontServiceImplTest {
 
         StepVerifier.create(result)
                 .assertNext(url -> {
-                    String expectedError = URLEncoder.encode("Сервис недоступен", StandardCharsets.UTF_8);
+                    String expectedError = URLEncoder.encode("Сервис переводов недоступен", StandardCharsets.UTF_8);
                     assertThat(url).contains(expectedError);
                 })
                 .verifyComplete();
