@@ -28,9 +28,6 @@ dependencies {
     api 'org.springframework.boot:spring-boot-starter-oauth2-client'
     api 'org.springframework.security:spring-security-oauth2-jose'
 
-    api 'org.springframework.cloud:spring-cloud-starter-consul-discovery'
-    api 'org.springframework.cloud:spring-cloud-starter-consul-config'
-    api 'org.springframework.cloud:spring-cloud-starter-loadbalancer'
     api 'org.springframework.cloud:spring-cloud-starter'
 
     api 'io.github.resilience4j:resilience4j-reactor'

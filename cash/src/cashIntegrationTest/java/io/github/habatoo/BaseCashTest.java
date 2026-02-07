@@ -39,8 +39,6 @@ import java.util.UUID;
         classes = CashApplication.class,
         webEnvironment = SpringBootTest.WebEnvironment.NONE,
         properties = {
-                "spring.cloud.consul.enabled=false",
-                "spring.cloud.consul.config.enabled=false",
                 "spring.cloud.compatibility-verifier.enabled=false",
                 "spring.main.allow-bean-definition-overriding=true",
                 "chassis.security.enabled=false"

@@ -1,0 +1,11 @@
+image:
+  repository: transfer
+  tag: ""
+
+database:
+  host: bank-dev-transfer-db
+  name: transfer_db
+
+keycloak:
+  host: keycloak
+  port: 8080

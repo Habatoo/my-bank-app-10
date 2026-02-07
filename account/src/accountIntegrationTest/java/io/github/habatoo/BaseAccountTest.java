@@ -39,8 +39,6 @@ import java.util.UUID;
         classes = AccountApplication.class,
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
-                "spring.cloud.consul.enabled=false",
-                "spring.cloud.consul.config.enabled=false",
                 "spring.cloud.compatibility-verifier.enabled=false",
                 "spring.main.allow-bean-definition-overriding=true",
                 "spring.liquibase.enabled=false"

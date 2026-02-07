@@ -1,0 +1,7 @@
+image:
+  repository: gateway
+  tag: ""
+
+keycloak:
+  host: keycloak
+  port: 8080

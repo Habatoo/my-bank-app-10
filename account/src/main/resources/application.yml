@@ -2,22 +2,19 @@ spring:
   application:
     name: account
 
-  config:
-    import: "optional:consul:${CONSUL_HOST:localhost}:${CONSUL_PORT:8500}"
-
   r2dbc:
-    url: r2dbc:postgresql://${DB_ACCOUNT_HOST:localhost}:${DB_ACCOUNT_PORT:5432}/${DB_ACCOUNT_NAME:account_db}?sslMode=disable
+    url: r2dbc:postgresql://${DB_ACCOUNT_HOST:bank-dev-account-db.dev.svc.cluster.local}:${DB_ACCOUNT_PORT:5432}/${DB_ACCOUNT_NAME:account_db}?sslMode=disable
     username: ${DB_USER_NAME:bank_admin}
     password: ${DB_PASSWORD:bank_password}
 
   datasource:
-    url: jdbc:postgresql://${DB_ACCOUNT_HOST:localhost}:${DB_ACCOUNT_PORT:5432}/${DB_ACCOUNT_NAME:account_db}?sslMode=disable
+    url: jdbc:postgresql://${DB_ACCOUNT_HOST:bank-dev-account-db.dev.svc.cluster.local}:${DB_ACCOUNT_PORT:5432}/${DB_ACCOUNT_NAME:account_db}?sslMode=disable
     username: ${DB_USER_NAME:bank_admin}
     password: ${DB_PASSWORD:bank_password}
 
   liquibase:
     change-log: classpath:db/changelog/account/db.changelog-master.yaml
-    url: jdbc:postgresql://${DB_ACCOUNT_HOST:localhost}:${DB_ACCOUNT_PORT:5432}/${DB_ACCOUNT_NAME:account_db}?sslMode=disable
+    url: jdbc:postgresql://${DB_ACCOUNT_HOST:bank-dev-account-db.dev.svc.cluster.local}:${DB_ACCOUNT_PORT:5432}/${DB_ACCOUNT_NAME:account_db}?sslMode=disable
     user: ${DB_USER_NAME:bank_admin}
     password: ${DB_PASSWORD:bank_password}
     contexts: dev,test,default
@@ -26,8 +23,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://keycloak.local/realms/bank/protocol/openid-connect/certs
-          issuer-uri: http://keycloak.local/realms/bank
+          jwk-set-uri: http://keycloak/realms/bank/protocol/openid-connect/certs
       client:
         registration:
           keycloak:
@@ -38,7 +34,4 @@ spring:
             scope: openid
         provider:
           keycloak:
-            issuer-uri: http://keycloak.local/realms/bank
-
-server:
-  port: ${SPRING_ACCOUNT_PORT:8083}
+            issuer-uri: http://keycloak/realms/bank

@@ -4,6 +4,7 @@ plugins {
     id 'maven-publish'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'org.springframework.cloud.contract' version '4.1.4'
+    id 'org.springframework.boot' version '3.5.8'
 }
 
 jacoco {
@@ -84,6 +85,10 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 jar {
+    enabled = false
+}
+
+bootJar {
     enabled = true
     archiveClassifier = ''
 }
@@ -136,4 +141,24 @@ publishing {
             artifact tasks.named("verifierStubsJar")
         }
     }
+}
+
+processResources {
+    from('src/main/resources') {
+        include '**/*'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('bootJar') {
+    requiresUnpack '**/templates/*.html'
+    from sourceSets.main.output
+}
+
+tasks.named('copyContracts') {
+    mustRunAfter tasks.named('bootJar')
+}
+
+tasks.named('verifierStubsJar') {
+    dependsOn tasks.named('bootJar')
 }

@@ -4,7 +4,6 @@ spring:
 
   config:
     import:
-      - "optional:consul:localhost:8500"
       - "optional:classpath:application.yml"
 
   security:
@@ -19,7 +18,4 @@ spring:
             scope: openid,profile,email
         provider:
           keycloak:
-            issuer-uri: http://keycloak.local/realms/bank
-
-server:
-  port: ${SPRING_FRONT_UI_PORT:8081}
+            issuer-uri: http://keycloak/realms/bank

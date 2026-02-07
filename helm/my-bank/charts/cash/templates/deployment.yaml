@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: {{ .Release.Namespace | default "dev" }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+              - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: bank-common-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: my-bank-common-secrets
+                  key: DB_PASSWORD
+            - name: DB_CASH_HOST
+              value: "bank-dev-cash-db"
+            - name: DB_CASH_NAME
+              value: "cash_db"
+            - name: KEYCLOAK_CASH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: my-bank-common-secrets
+                  key: KEYCLOAK_CASH_SECRET
+            - name: KEYCLOAK_HOST
+              value: "keycloak"
+            - name: KEYCLOAK_PORT
+              value: "8080"
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+              value: "http://keycloak/realms/bank"
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI
+              value: "http://keycloak/realms/bank"

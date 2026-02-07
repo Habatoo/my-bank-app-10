@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bank-common-config
+  namespace: dev
+data:
+  KEYCLOAK_HOST: "keycloak"
+  KEYCLOAK_PORT: "8080"
+  KEYCLOAK_URL: "http://keycloak"
+  KEYCLOAK_REALM: "bank"
+
+  DB_USER_NAME: "bank_admin"
+  DB_PORT: "5432"
+
+  NOTIFICATION_URL: "http://notification/notification"
+  GATEWAY_HOST: "http://gateway"

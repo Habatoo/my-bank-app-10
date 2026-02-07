@@ -36,6 +36,7 @@ import static org.mockito.Mockito.*;
  * Тестирование реализации сервиса пользователей {@link UserServiceImpl}.
  * Проверяет логику автоматической регистрации из JWT и обновление профиля.
  */
+@SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Юнит-тесты сервиса UserServiceImpl")
 class UserServiceImplTest {

@@ -6,8 +6,7 @@ spring:
     allow-bean-definition-overriding: true
   cloud:
     compatibility-verifier: false
-    consul:
-      enabled: false
+
     config:
       enabled: false
   liquibase:

@@ -1,4 +1,3 @@
-io.github.habatoo.configurations.ConsulChassisAutoConfiguration
 io.github.habatoo.configurations.ExceptionChassisAutoConfiguration
 io.github.habatoo.configurations.JsonChassisAutoConfiguration
 io.github.habatoo.configurations.LoggingChassisAutoConfiguration

@@ -3,7 +3,7 @@ plugins {
     id 'jacoco'
     id 'maven-publish'
     id 'io.spring.dependency-management' version '1.1.7'
-    id 'org.springframework.cloud.contract' version '4.1.4'
+    id 'org.springframework.boot' version '3.5.8'
 }
 
 jacoco {
@@ -26,7 +26,6 @@ sourceSets {
     test {
         java {
             srcDir 'src/test/java'
-            srcDir "$buildDir/generated-test-sources/contracts"
         }
         resources.srcDir 'src/test/resources'
     }
@@ -60,8 +59,6 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
-    contractTestImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
     testImplementation 'io.rest-assured:spring-web-test-client'
 
     frontIntegrationTestImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -75,8 +72,6 @@ dependencies {
     frontIntegrationTestImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
     frontIntegrationTestImplementation 'com.squareup.okhttp3:mockwebserver'
     frontIntegrationTestImplementation 'io.micrometer:micrometer-test'
-    frontIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
-    frontIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-contract-verifier'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -103,7 +98,6 @@ tasks.register('frontIntegrationTest', Test) {
 
     useJUnitPlatform()
     shouldRunAfter test
-    dependsOn 'generateContractTests'
 }
 
 tasks.named('processFrontIntegrationTestResources') {
@@ -123,18 +117,3 @@ tasks.named('processFrontIntegrationTestResources') {
 }
 
 check.dependsOn frontIntegrationTest
-
-contracts {
-    baseClassForTests = 'io.github.habatoo.controllers.BaseContractTest'
-    testMode = 'WEBTESTCLIENT'
-    contractsDslDir = file("$projectDir/src/test/resources/contracts")
-}
-
-publishing {
-    publications {
-        create("mavenJava", MavenPublication) {
-            from components.java
-            artifact tasks.named("verifierStubsJar")
-        }
-    }
-}

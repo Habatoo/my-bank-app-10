@@ -1,0 +1,11 @@
+image:
+  repository: cash
+  tag: ""
+
+database:
+  host: bank-dev-cash-db
+  name: cash_db
+
+keycloak:
+  host: keycloak
+  port: 8080

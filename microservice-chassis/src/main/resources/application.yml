@@ -2,33 +2,16 @@ spring:
   application:
     name: chassis-template
     notification:
-      url: ${NOTIFICATION_URL:http://localhost:8085/api/v1/notification}
+      url: ${NOTIFICATION_URL:http://notification/notification}
     gateway:
       host: ${GATEWAY_HOST:http://gateway}
     date: yyyy-MM-dd HH:mm:ss
     fixed_write_delay: 5000
     fixed_clean_delay: 50000
-  config:
-    import: "optional:consul:${CONSUL_HOST:localhost}:${CONSUL_PORT:8500}"
+
   cloud:
-    consul:
-      host: ${CONSUL_HOST:localhost}
-      port: ${CONSUL_PORT:8500}
-      discovery:
-        prefer-ip-address: true
-        health-check-path: /actuator/health/readiness
-        health-check-interval: 10s
-        instance-id: ${spring.application.name}:${random.value}
-        ip-address: localhost
-        register: true
-      config:
-        enabled: true
-        format: yaml
-        prefixes: [ config ]
-        defaultContext: application
-        watch:
-          enabled: true
-          delay: 1000
+    loadbalancer:
+      enabled: false
 
   resilience:
     instanceName: ${spring.application.name}
@@ -91,3 +74,6 @@ management:
       probes:
         enabled: true
       show-details: always
+
+server:
+  port: 8080

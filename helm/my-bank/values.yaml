@@ -37,13 +37,14 @@ global:
   keycloak:
     url: "http://keycloak"
     port: "8080"
-    realm: "bank-realm"
+    realm: "bank"
 
 keycloak:
   service:
     type: ClusterIP
     ports:
-      http: 8080
+      http: 80
+    targetPort: 8080
 
   postgresql:
     enabled: true
@@ -64,6 +65,10 @@ keycloak:
     adminPassword: admin
 
   extraEnvVars:
+    - name: KC_BOOTSTRAP_ADMIN_USERNAME
+      value: "admin"
+    - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+      value: "admin"
     - name: KEYCLOAK_LOG_LEVEL
       value: "DEBUG"
     - name: KC_HEALTH_ENABLED
@@ -76,10 +81,12 @@ keycloak:
       value: "false"
     - name: KC_HOSTNAME_STRICT_HTTPS
       value: "false"
+    - name: KC_HOSTNAME_STRICT_BACKCHANNEL
+      value: "false"
     - name: KC_PROXY_HEADERS
       value: "xforwarded"
     - name: KC_HOSTNAME
-      value: "keycloak.local"
+      value: "keycloak"
     - name: KC_IMPORT_STRATEGY
       value: "OVERWRITE_EXISTING"
     - name: KEYCLOAK_EXTRA_ARGS

@@ -2,11 +2,8 @@ spring:
   application:
     name: transfer
 
-  config:
-    import: "optional:consul:${CONSUL_HOST:localhost}:8500"
-
   r2dbc:
-    url: r2dbc:postgresql://${DB_TRANSFER_HOST:localhost}:${DB_TRANSFER_PORT:5434}/${DB_TRANSFER_NAME:transfer_db}
+    url: r2dbc:postgresql://${DB_TRANSFER_HOST:localhost}:${DB_TRANSFER_PORT:5432}/${DB_TRANSFER_NAME:transfer_db}
     username: ${DB_USER_NAME:bank_admin}
     password: ${DB_PASSWORD:bank_password}
     pool:
@@ -15,7 +12,7 @@ spring:
       max-size: 50
 
   datasource:
-    url: jdbc:postgresql://${DB_TRANSFER_HOST:localhost}:${DB_TRANSFER_PORT:5434}/${DB_TRANSFER_NAME:transfer_db}
+    url: jdbc:postgresql://${DB_TRANSFER_HOST:localhost}:${DB_TRANSFER_PORT:5432}/${DB_TRANSFER_NAME:transfer_db}
     username: ${DB_USER_NAME:bank_admin}
     password: ${DB_PASSWORD:bank_password}
     driver-class-name: org.postgresql.Driver
@@ -24,7 +21,7 @@ spring:
     enabled: ${LIQUIBASE_ENABLED:true}
     change-log: classpath:db/changelog/transfer/db.changelog-master.yaml
     default-schema: ${DB_SCHEMA:public}
-    url: jdbc:postgresql://${DB_TRANSFER_HOST:localhost}:${DB_TRANSFER_PORT:5434}/${DB_TRANSFER_NAME:transfer_db}
+    url: jdbc:postgresql://${DB_TRANSFER_HOST:localhost}:${DB_TRANSFER_PORT:5432}/${DB_TRANSFER_NAME:transfer_db}
     user: ${DB_USER_NAME:bank_admin}
     password: ${DB_PASSWORD:bank_password}
     contexts: dev,test,default
@@ -33,8 +30,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://keycloak.local/realms/bank/protocol/openid-connect/certs
-          issuer-uri: http://keycloak.local/realms/bank
+          jwk-set-uri: http://keycloak/realms/bank/protocol/openid-connect/certs
+          issuer-uri: http://keycloak/realms/bank
       client:
         registration:
           keycloak:
@@ -45,7 +42,4 @@ spring:
             scope: openid
         provider:
           keycloak:
-            issuer-uri: http://keycloak.local/realms/bank
-
-server:
-  port: ${SPRING_TRANSFER_PORT:8086}
+            issuer-uri: http://keycloak/realms/bank

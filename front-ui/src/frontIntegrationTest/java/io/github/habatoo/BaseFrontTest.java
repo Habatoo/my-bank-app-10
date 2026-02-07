@@ -44,9 +44,7 @@ import java.math.BigDecimal;
         },
         webEnvironment = SpringBootTest.WebEnvironment.NONE,
         properties = {
-                "spring.main.allow-bean-definition-overriding=true",
-                "spring.cloud.consul.enabled=false",
-                "spring.cloud.consul.config.enabled=false"
+                "spring.main.allow-bean-definition-overriding=true"
         })
 @Import({
         io.github.resilience4j.springboot3.circuitbreaker.autoconfigure.CircuitBreakerAutoConfiguration.class,

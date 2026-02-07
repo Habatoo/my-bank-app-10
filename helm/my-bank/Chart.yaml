@@ -29,3 +29,21 @@ dependencies:
     version: "25.2.0"
     repository: "file://charts/keycloak"
     alias: keycloak
+
+  - name: account
+    repository: "file://charts/account"
+
+  - name: cash
+    repository: "file://charts/cash"
+
+  - name: gateway
+    repository: "file://charts/gateway"
+
+  - name: front-ui
+    repository: "file://charts/front-ui"
+
+  - name: notification
+    repository: "file://charts/notification"
+
+  - name: transfer
+    repository: "file://charts/transfer"

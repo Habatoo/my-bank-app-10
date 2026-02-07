@@ -25,7 +25,7 @@ public class LoggingWebFilter implements WebFilter {
 
     /**
      * Фильтр для входЯщих запросов - игнорирует эндпоинты health-check,
-     * которые вызываются инфраструктурой Consul. Проводит замеры времени исполнения запроса.
+     * Проводит замеры времени исполнения запроса.
      *
      * @param exchange the current server exchange
      * @param chain    цепочка делегирования фильтров

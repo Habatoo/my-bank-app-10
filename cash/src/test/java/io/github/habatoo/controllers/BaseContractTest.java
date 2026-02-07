@@ -50,8 +50,6 @@ import static org.mockito.Mockito.when;
                 TestSecurityConfiguration.class
         },
         properties = {
-                "spring.cloud.consul.enabled=false",
-                "spring.cloud.consul.config.enabled=false",
                 "spring.cloud.compatibility-verifier.enabled=false",
                 "spring.main.allow-bean-definition-overriding=true",
                 "spring.liquibase.enabled=false",

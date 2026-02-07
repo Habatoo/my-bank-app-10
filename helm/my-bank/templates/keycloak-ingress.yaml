@@ -9,9 +9,11 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
+    nginx.ingress.kubernetes.io/upstream-vhost: "keycloak:8080"
 spec:
+  ingressClassName: nginx
   rules:
-    - host: keycloak.local
+    - host: keycloak
       http:
         paths:
           - path: /
@@ -20,4 +22,4 @@ spec:
               service:
                 name: keycloak
                 port:
-                  number: 8080
+                  number: 80

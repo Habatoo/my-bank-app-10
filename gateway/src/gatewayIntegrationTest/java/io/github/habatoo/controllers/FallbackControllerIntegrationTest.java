@@ -26,7 +26,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
         classes = GatewayApplication.class,
         webEnvironment = SpringBootTest.WebEnvironment.MOCK,
         properties = {
-                "spring.cloud.consul.enabled=false",
                 "spring.main.allow-bean-definition-overriding=true",
                 "spring.liquibase.enabled=false",
                 "spring.security.oauth2.client.registration.keycloak.enabled=false",
