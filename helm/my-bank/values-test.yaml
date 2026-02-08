@@ -1,0 +1,43 @@
+global:
+  namespace: test
+
+account:
+  replicaCount: 2
+  resources:
+    limits: { memory: "1Gi", cpu: "1000m" }
+    requests: { memory: "512Mi", cpu: "200m" }
+
+cash:
+  replicaCount: 2
+  resources:
+    limits: { memory: "1Gi", cpu: "1000m" }
+    requests: { memory: "512Mi", cpu: "200m" }
+
+notification:
+  replicaCount: 2
+  resources:
+    limits: { memory: "1Gi", cpu: "1000m" }
+    requests: { memory: "512Mi", cpu: "200m" }
+
+transfer:
+  replicaCount: 2
+  resources:
+    limits: { memory: "1Gi", cpu: "1000m" }
+    requests: { memory: "512Mi", cpu: "200m" }
+
+front-ui:
+  replicaCount: 2
+  resources:
+    limits: { memory: "1Gi", cpu: "1000m" }
+    requests: { memory: "512Mi", cpu: "200m" }
+
+gateway:
+  replicaCount: 2
+  resources:
+    limits: { memory: "1Gi", cpu: "1000m" }
+    requests: { memory: "512Mi", cpu: "200m" }
+
+account-db: { postgres: { password: "test_db_pass_1" } }
+cash-db: { postgres: { password: "test_db_pass_2" } }
+notification-db: { postgres: { password: "test_db_pass_3" } }
+transfer-db: { postgres: { password: "test_db_pass_4" } }
