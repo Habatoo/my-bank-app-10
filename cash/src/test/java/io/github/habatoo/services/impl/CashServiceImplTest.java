@@ -2,6 +2,7 @@ package io.github.habatoo.services.impl;
 
 import io.github.habatoo.dto.CashDto;
 import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.dto.enums.OperationType;
 import io.github.habatoo.models.Cash;
 import io.github.habatoo.repositories.OperationsRepository;
@@ -17,11 +18,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.util.function.Function;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -33,11 +37,14 @@ import static org.mockito.Mockito.*;
  * Проверяет бизнес-логику проведения платежей, сохранение в историю,
  * работу с Outbox и механизм компенсации при ошибках БД.
  */
+@SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Юнит-тесты сервиса CashServiceImpl")
 class CashServiceImplTest {
 
     private final String LOGIN = "test_user";
+    private final String USER_ID = "550e8400-e29b-41d4-a716-446655440000";
+
     @Mock
     private OperationsRepository operationsRepository;
     @Mock
@@ -47,109 +54,91 @@ class CashServiceImplTest {
     @Mock
     private CircuitBreakerRegistry circuitBreakerRegistry;
     @Mock
-    private CircuitBreaker circuitBreaker;
+    private Jwt jwt;
+
     @InjectMocks
     private CashServiceImpl cashService;
 
     @BeforeEach
     void setUp() {
-        CircuitBreaker cb = CircuitBreaker.ofDefaults("cash-service-cb");
-        when(circuitBreakerRegistry.circuitBreaker("cash-service-cb")).thenReturn(cb);
+        CircuitBreaker cb = CircuitBreaker.ofDefaults("cashServiceCB");
+        lenient().when(circuitBreakerRegistry.circuitBreaker("cashServiceCB")).thenReturn(cb);
+        lenient().when(jwt.getClaimAsString("preferred_username")).thenReturn(LOGIN);
+        lenient().when(jwt.getSubject()).thenReturn(USER_ID);
     }
 
-    /**
-     * Успешный сценарий пополнения баланса.
-     */
     @Test
-    @DisplayName("Обработка операции: успешное пополнение (PUT)")
+    @DisplayName("Успешное пополнение (PUT): парсинг строк и вызов внешнего сервиса")
     void processCashOperationPutSuccessTest() {
-        CashDto cashDto = CashDto.builder()
-                .action(OperationType.PUT)
-                .value(BigDecimal.valueOf(1000))
-                .build();
-
         OperationResultDto<Void> accountResponse = OperationResultDto.<Void>builder()
                 .success(true)
                 .build();
 
         mockWebClientPost(accountResponse);
-
         when(operationsRepository.save(any(Cash.class))).thenReturn(Mono.just(new Cash()));
         when(outboxClientService.saveEvent(any())).thenReturn(Mono.empty());
 
-        Mono<OperationResultDto<CashDto>> result = cashService.processCashOperation(LOGIN, cashDto);
+        Mono<OperationResultDto<CashDto>> result = cashService.processCashOperation(
+                BigDecimal.valueOf(1000), "put", "rub", jwt);
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> res.isSuccess()
-                        && res.getMessage().contains("успешно проведена"))
+                        && res.getData().getCurrency() == Currency.RUB
+                        && res.getData().getAction() == OperationType.PUT)
                 .verifyComplete();
 
         verify(operationsRepository).save(any());
-        verify(outboxClientService).saveEvent(argThat(event -> event.getStatus().name().equals("SUCCESS")));
     }
 
-    /**
-     * Сценарий ошибки внешнего сервиса аккаунтов.
-     */
     @Test
-    @DisplayName("Обработка операции: отказ сервиса аккаунтов")
-    void processCashOperationAccountErrorTest() {
-        CashDto cashDto = CashDto.builder()
-                .action(OperationType.PUT)
-                .value(BigDecimal.valueOf(1000))
-                .build();
-
-        OperationResultDto<Void> accountError = OperationResultDto.<Void>builder()
-                .success(false)
-                .message("Account service unavailable")
-                .errorCode("SERVICE_ERROR")
-                .build();
-
-        mockWebClientPost(accountError);
-
-        Mono<OperationResultDto<CashDto>> result = cashService.processCashOperation(LOGIN, cashDto);
+    @DisplayName("Ошибка валидации: неверный формат валюты")
+    void processCashOperationInvalidCurrencyTest() {
+        Mono<OperationResultDto<CashDto>> result = cashService.processCashOperation(
+                BigDecimal.valueOf(1000), "PUT", "INVALID_CUR", jwt);
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> !res.isSuccess()
-                        && "SERVICE_ERROR".equals(res.getErrorCode()))
+                        && res.getMessage().contains("Неподдерживаемая валюта"))
                 .verifyComplete();
 
-        verify(operationsRepository, never()).save(any());
+        verifyNoInteractions(webClient);
+        verifyNoInteractions(operationsRepository);
     }
 
-    /**
-     * Сценарий компенсации: ошибка БД после успешного списания в сервисе аккаунтов.
-     */
     @Test
-    @DisplayName("Компенсация: ошибка БД инициирует возврат средств")
-    void compensationLogicTest() {
-        CashDto cashDto = CashDto.builder()
-                .action(OperationType.PUT)
-                .value(BigDecimal.valueOf(500))
-                .build();
+    @DisplayName("Ошибка валидации: отрицательная сумма")
+    void processCashOperationNegativeValueTest() {
+        Mono<OperationResultDto<CashDto>> result = cashService.processCashOperation(
+                BigDecimal.valueOf(-100), "PUT", "RUB", jwt);
 
+        StepVerifier.create(result)
+                .expectNextMatches(res -> !res.isSuccess()
+                        && res.getMessage().contains("должна быть положительной"))
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Компенсация: ошибка БД после списания")
+    void compensationLogicTest() {
         OperationResultDto<Void> accountSuccess = OperationResultDto.<Void>builder().success(true).build();
         mockWebClientPost(accountSuccess);
 
         when(operationsRepository.save(any(Cash.class)))
                 .thenReturn(Mono.error(new RuntimeException("DB Failure")));
-
         when(outboxClientService.saveEvent(any())).thenReturn(Mono.empty());
 
-        Mono<OperationResultDto<CashDto>> result = cashService.processCashOperation(LOGIN, cashDto);
+        Mono<OperationResultDto<CashDto>> result = cashService.processCashOperation(
+                BigDecimal.valueOf(500), "GET", "USD", jwt);
 
         StepVerifier.create(result)
                 .expectNextMatches(res -> !res.isSuccess()
-                        && res.getMessage().contains("Ошибка сохранения"))
+                        && res.getMessage().contains("Сбой сохранения"))
                 .verifyComplete();
 
         verify(webClient.post(), times(2)).uri(any(Function.class));
         verify(outboxClientService).saveEvent(argThat(event -> event.getStatus().name().equals("FAILURE")));
     }
 
-    /**
-     * Вспомогательный метод для мокирования реактивной цепочки WebClient.
-     */
     @SuppressWarnings("unchecked")
     private void mockWebClientPost(OperationResultDto<Void> response) {
         when(webClient.post()

@@ -43,6 +43,17 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 400 — Некорректный тип операции (Enum conversion error) или ошибки ввода
+     */
+    @ExceptionHandler({IllegalArgumentException.class, org.springframework.web.server.ServerWebInputException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Mono<ErrorResponse> handleBadRequest(Exception e) {
+        log.warn("Bad request: {}", e.getMessage());
+
+        return buildResponse("VALIDATION_ERROR", e.getMessage());
+    }
+
+    /**
      * 403 — Доступ запрещен (ошибка авторизации на уровне методов @PreAuthorize)
      */
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)

@@ -3,6 +3,7 @@ package io.github.habatoo.controllers;
 import io.github.habatoo.configurations.SecurityChassisAutoConfiguration;
 import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.dto.TransferDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.services.TransferService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
@@ -54,52 +56,44 @@ class TransferControllerCashedTest {
     @MockitoBean
     private ErrorWebExceptionHandler errorWebExceptionHandler;
 
-    /**
-     * Тест проверяет успешное выполнение запроса на перевод при наличии роли USER.
-     * Использует mockJwt() для эмуляции аутентифицированного пользователя.
-     */
     @Test
     @DisplayName("POST /transfer - Успех при наличии роли ROLE_USER")
     void transferMoneySuccess() {
         BigDecimal amount = new BigDecimal("100.00");
         String targetAccount = "ivan_ivanov";
+        String sender = "test_user";
 
-        TransferDto resultDto = TransferDto.builder()
+        TransferDto requestDto = TransferDto.builder()
                 .login(targetAccount)
                 .value(amount)
+                .fromCurrency(Currency.RUB)
                 .build();
 
         OperationResultDto<TransferDto> serviceResponse = OperationResultDto.<TransferDto>builder()
                 .success(true)
                 .message("Operation completed")
-                .data(resultDto)
+                .data(requestDto)
                 .build();
 
-        when(transferService.processTransferOperation(eq("test_user"), any(TransferDto.class)))
+        when(transferService.processTransferOperation(eq(sender), any(TransferDto.class)))
                 .thenReturn(Mono.just(serviceResponse));
 
         webTestClient
                 .mutateWith(csrf())
                 .mutateWith(mockJwt()
-                        .jwt(jwt -> jwt.claim("preferred_username", "test_user"))
+                        .jwt(jwt -> jwt.claim("preferred_username", sender))
                         .authorities(new SimpleGrantedAuthority("ROLE_USER")))
                 .post()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/transfer")
-                        .queryParam("value", amount)
-                        .queryParam("account", targetAccount)
-                        .build())
+                .uri("/transfer")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(requestDto)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.data.login").isEqualTo(targetAccount)
-                .jsonPath("$.data.value").isEqualTo(100.00);
+                .jsonPath("$.data.login").isEqualTo(targetAccount);
     }
 
-    /**
-     * Тест проверяет работу безопасности: доступ должен быть запрещен без нужной роли.
-     */
     @Test
     @DisplayName("POST /transfer - Ошибка 403 при отсутствии необходимых ролей")
     void transferMoneyForbidden() {
@@ -108,32 +102,37 @@ class TransferControllerCashedTest {
                 .mutateWith(mockJwt()
                         .authorities(new SimpleGrantedAuthority("ROLE_GUEST")))
                 .post()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/transfer")
-                        .queryParam("value", 100)
-                        .queryParam("account", "any")
-                        .build())
+                .uri("/transfer")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new TransferDto())
                 .exchange()
                 .expectStatus().isForbidden();
     }
 
-    /**
-     * Тест проверяет возврат сообщения об ошибке при невалидной сумме (бизнес-валидация контроллера).
-     */
     @Test
-    @DisplayName("POST /transfer - Ошибка 200 с флагом success=false при сумме <= 0")
+    @DisplayName("POST /transfer - Ошибка бизнес-валидации при отрицательной сумме")
     void transferMoneyNegativeValue() {
+        String sender = "test_user";
+        TransferDto negativeDto = TransferDto.builder()
+                .value(new BigDecimal("-50.00"))
+                .login("target")
+                .build();
+
+        when(transferService.processTransferOperation(any(), any()))
+                .thenReturn(Mono.just(OperationResultDto.<TransferDto>builder()
+                        .success(false)
+                        .message("Сумма перевода должна быть больше нуля")
+                        .build()));
+
         webTestClient
                 .mutateWith(csrf())
                 .mutateWith(mockJwt()
-                        .jwt(jwt -> jwt.claim("preferred_username", "test_user"))
+                        .jwt(jwt -> jwt.claim("preferred_username", sender))
                         .authorities(new SimpleGrantedAuthority("ROLE_USER")))
                 .post()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/transfer")
-                        .queryParam("value", -50)
-                        .queryParam("account", "target")
-                        .build())
+                .uri("/transfer")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(negativeDto)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()

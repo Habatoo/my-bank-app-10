@@ -1,0 +1,19 @@
+# tags.yaml
+account:
+  image:
+    tag: "0.1.0"
+cash:
+  image:
+    tag: "0.1.0"
+transfer:
+  image:
+    tag: "0.1.0"
+gateway:
+  image:
+    tag: "0.1.0"
+notification:
+  image:
+    tag: "0.1.0"
+front-ui:
+  image:
+    tag: "0.1.0"

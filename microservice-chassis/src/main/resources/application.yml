@@ -1,30 +1,17 @@
 spring:
   application:
-    name: template
+    name: chassis-template
     notification:
-      url: ${NOTIFICATION_HOST:http://localhost:8085/notification}
+      url: ${NOTIFICATION_URL:http://notification/notification}
+    gateway:
+      host: ${GATEWAY_HOST:http://gateway:8080}
     date: yyyy-MM-dd HH:mm:ss
     fixed_write_delay: 5000
     fixed_clean_delay: 50000
-  config:
-    import: "optional:consul:${CONSUL_HOST:localhost}:8500"
+
   cloud:
-    consul:
-      host: ${CONSUL_HOST:localhost}
-      port: 8500
-      discovery:
-        prefer-ip-address: true
-        health-check-path: /actuator/health/readiness
-        health-check-interval: 10s
-        instance-id: ${spring.application.name}:${random.value}
-      config:
-        enabled: true
-        format: yaml
-        prefixes: [ config ]
-        defaultContext: application
-        watch:
-          enabled: true
-          delay: 1000
+    loadbalancer:
+      enabled: false
 
   resilience:
     instanceName: ${spring.application.name}
@@ -34,26 +21,26 @@ spring:
     permitted-number-of-calls-in-half-open-state: 3
 
   r2dbc:
-    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:db}
-    username: ${DB_USER_NAME:name}
-    password: ${DB_PASSWORD:password}
+    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:db}?sslMode=disable
+    username: ${DB_USER_NAME:bank_admin}
+    password: ${DB_PASSWORD:bank_password}
     pool:
       enabled: true
       initial-size: 10
       max-size: 50
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:db}
-    username: ${DB_USER_NAME:name}
-    password: ${DB_PASSWORD:password}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:db}?sslMode=disable
+    username: ${DB_USER_NAME:bank_admin}
+    password: ${DB_PASSWORD:bank_password}
     driver-class-name: org.postgresql.Driver
 
   liquibase:
     enabled: ${LIQUIBASE_ENABLED:true}
     default-schema: ${DB_SCHEMA:public}
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:db}
-    user: ${DB_USER_NAME:name}
-    password: ${DB_PASSWORD:password}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:db}?sslMode=disable
+    user: ${DB_USER_NAME:bank_admin}
+    password: ${DB_PASSWORD:bank_password}
     contexts: default
 
   jpa:
@@ -65,53 +52,28 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://${KEYCLOAK_HOST:localhost}:8082/realms/${KEYCLOAK_REALM:bank}/protocol/openid-connect/certs
+          jwk-set-uri: http://${KEYCLOAK_HOST:localhost}:${KEYCLOAK_PORT:8082}/realms/${KEYCLOAK_REALM:bank}/protocol/openid-connect/certs
       client:
         registration:
           keycloak:
             provider: keycloak
             client-id: ${spring.application.name}
+            authorization-grant-type: client_credentials
+            scope: openid
         provider:
           keycloak:
             issuer-uri: http://${KEYCLOAK_HOST:localhost}:${KEYCLOAK_PORT:8082}/realms/${KEYCLOAK_REALM:bank}
 
 management:
-  server:
-    port: ${server.port}
   endpoints:
     web:
       exposure:
-        include: health,info,refresh,prometheus,metrics,gateway
+        include: health,info,refresh,prometheus,metrics
   endpoint:
     health:
       probes:
         enabled: true
-      show-details: when_authorized
-  tracing:
-    enabled: true
-    sampling:
-      probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: ""
-  otlp:
-    tracing:
-      endpoint: ""
+      show-details: always
 
-resilience4j:
-  circuitbreaker:
-    configs:
-      default:
-        registerHealthIndicator: true
-        eventConsumerBufferSize: 10
-
-logging:
-  level:
-    org.springframework.cloud.gateway: TRACE
-    org.springframework.security: DEBUG
-    org.springframework.http.server.reactive: DEBUG
-    reactor.netty.http.client: DEBUG
-
-springdoc:
-  server:
-    port: ${server.port}
+server:
+  port: 8080

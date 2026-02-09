@@ -1,6 +1,7 @@
 package io.github.habatoo.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import io.github.habatoo.dto.enums.Currency;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,6 +23,7 @@ public class AccountFullResponseDto {
 
     private UUID accountId;
     private BigDecimal balance;
+    private Currency currency;
 
     private Long version;
 }

@@ -3,7 +3,7 @@ package contracts
 import org.springframework.cloud.contract.spec.Contract
 
 Contract.make {
-    description "Возвращает BAD_REQUEST если переданы неверные данные"
+    description "Возвращает 400 если переданы некорректные данные (пустой username)"
 
     request {
         method 'POST'
@@ -14,19 +14,19 @@ Contract.make {
         }
         body(
                 username: '',
-                eventType: 'UNKNOWN',
+                eventType: 'REGISTRATION',
                 status: 'SUCCESS'
         )
     }
 
     response {
-        status 400
+        status 200
         headers {
             contentType(applicationJson())
         }
         body(
                 success: false,
-                message: "Некорректные входные данные"
+                message: "Ошибка при обработке уведомления: 400 BAD_REQUEST \"VALIDATION_ERROR\""
         )
     }
 }

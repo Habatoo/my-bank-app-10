@@ -1,4 +1,4 @@
-package contracts.cash
+package contracts
 
 import org.springframework.cloud.contract.spec.Contract
 
@@ -7,15 +7,16 @@ Contract.make {
 
     request {
         method 'POST'
-        urlPath('/cash')
+        urlPath('/cash') {
+            queryParameters {
+                parameter 'value', '100.00'
+                parameter 'action', 'PUT'
+                parameter 'currency', 'RUB'
+            }
+        }
         headers {
             header('Authorization', 'Bearer dummy-token')
-            header('Content-Type', 'application/x-www-form-urlencoded')
         }
-        body(
-                value: "150.00",
-                action: "PUT"
-        )
     }
 
     response {
@@ -26,8 +27,9 @@ Contract.make {
         body(
                 success: true,
                 data: [
-                        value: 150.00,
-                        action: "PUT"
+                        value: 100.00,
+                        action: "PUT",
+                        currency: "RUB"
                 ],
                 message: "Операция успешно проведена и сохранена"
         )

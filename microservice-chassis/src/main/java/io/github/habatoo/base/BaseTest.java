@@ -12,7 +12,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * Базовый класс для интеграционных тестов с использованием Testcontainers.
  * <p>
  * Обеспечивает автоматический запуск контейнера PostgreSQL, настройку реактивного подключения R2DBC,
- * выполнение миграций Liquibase и инициализацию окружения (отключение Consul, заглушка JWT).
+ * выполнение миграций Liquibase и инициализацию окружения (заглушка JWT).
  * Содержит вспомогательные методы для создания тестовых сущностей пользователей и счетов.
  */
 @Testcontainers
@@ -38,8 +38,6 @@ public abstract class BaseTest {
         registry.add("spring.liquibase.password", postgres::getPassword);
         registry.add("spring.liquibase.enabled", () -> "true");
 
-        registry.add("spring.cloud.consul.enabled", () -> "false");
-        registry.add("spring.cloud.consul.config.enabled", () -> "false");
         registry.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", () -> "http://localhost");
     }
 }

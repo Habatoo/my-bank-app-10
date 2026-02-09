@@ -2,6 +2,8 @@ package io.github.habatoo.services.impl;
 
 import io.github.habatoo.dto.OperationResultDto;
 import io.github.habatoo.dto.TransferDto;
+import io.github.habatoo.dto.enums.Currency;
+import io.github.habatoo.services.RateClientService;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,34 +23,32 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
  * Тесты для проверки логики сервиса переводов (TransferFrontServiceImpl).
- * <p>
- * Тестирование охватывает сценарии успешного перевода средств,
- * бизнес-ошибок (например, неверный логин) и системных сбоев.
- * </p>
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Юнит-тесты сервиса переводов (TransferFrontServiceImpl)")
+@SuppressWarnings("unchecked")
 class TransferFrontServiceImplTest {
 
     @Mock
     private WebClient webClient;
 
     @Mock
-    @SuppressWarnings("rawtypes")
+    private RateClientService rateClientService;
+
+    @Mock
     private WebClient.RequestBodyUriSpec requestBodyUriSpec;
 
     @Mock
-    @SuppressWarnings("rawtypes")
     private WebClient.RequestBodySpec requestBodySpec;
 
     @Mock
-    @SuppressWarnings("rawtypes")
     private WebClient.RequestHeadersSpec requestHeadersSpec;
 
     @Mock
@@ -57,36 +57,31 @@ class TransferFrontServiceImplTest {
     @Mock
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
-    @Mock
-    private CircuitBreaker circuitBreaker;
-
     @InjectMocks
     private TransferFrontServiceImpl transferService;
 
-    /**
-     * Настройка цепочки вызовов WebClient перед каждым тестом.
-     */
     @BeforeEach
-    @SuppressWarnings("unchecked")
     void setUp() {
         CircuitBreaker cb = CircuitBreaker.ofDefaults("gateway-cb");
-        when(circuitBreakerRegistry.circuitBreaker("gateway-cb")).thenReturn(cb);
+        lenient().when(circuitBreakerRegistry.circuitBreaker("gateway-cb")).thenReturn(cb);
 
-        when(webClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodySpec);
-        when(requestBodySpec.bodyValue(any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        lenient().when(webClient.post()).thenReturn(requestBodyUriSpec);
+        lenient().when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodySpec);
+        lenient().when(requestBodySpec.bodyValue(any())).thenReturn(requestHeadersSpec);
+        lenient().when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        lenient().when(rateClientService.takeRate(any(Currency.class), any(Currency.class))).thenReturn(BigDecimal.ONE);
     }
 
-    /**
-     * Проверка формирования редиректа при успешном переводе.
-     */
     @Test
     @DisplayName("Успешный перевод — Проверка формирования URL")
     void shouldReturnSuccessRedirectTest() {
         TransferDto dto = new TransferDto();
         dto.setLogin("receiver_user");
         dto.setValue(new BigDecimal("500"));
+        dto.setFromCurrency(Currency.USD);
+        dto.setToCurrency(Currency.USD);
+
+        when(rateClientService.takeRate(Currency.USD, Currency.USD)).thenReturn(BigDecimal.ONE);
 
         OperationResultDto<TransferDto> successResponse = OperationResultDto.<TransferDto>builder()
                 .success(true)
@@ -99,16 +94,59 @@ class TransferFrontServiceImplTest {
 
         StepVerifier.create(result)
                 .assertNext(url -> {
-                    assertTrue(url.contains("info="));
-                    String expectedMsg = "Перевод пользователю + receiver_user на сумму 500 ₽ выполнено успешно";
-                    assertTrue(url.contains(URLEncoder.encode(expectedMsg, StandardCharsets.UTF_8)));
+                    assertThat(url).startsWith("redirect:/main?info=");
+
+                    String expectedMsg = String.format("Перевод пользователю: списано %.2f %s, зачислено %.2f %s",
+                            new BigDecimal("500"), Currency.USD, new BigDecimal("500"), Currency.USD);
+
+                    assertThat(url).contains(URLEncoder.encode(expectedMsg, StandardCharsets.UTF_8));
                 })
                 .verifyComplete();
     }
 
-    /**
-     * Проверка обработки ошибки, возвращенной от API (например, пользователь не найден).
-     */
+    @Test
+    @DisplayName("Внутренний перевод (самому себе) — Одинаковые валюты")
+    void shouldReturnInfoRedirectWhenCurrenciesSameTest() {
+        TransferDto dto = new TransferDto();
+        dto.setFromCurrency(Currency.RUB);
+        dto.setToCurrency(Currency.RUB);
+
+        Mono<String> result = transferService.sendMoneyToSelf(dto);
+
+        StepVerifier.create(result)
+                .assertNext(url -> {
+                    assertThat(url).startsWith("redirect:/main?info=");
+                    String expectedMsg = "Счета совпадают, баланс не изменился";
+                    assertThat(url).contains(URLEncoder.encode(expectedMsg, StandardCharsets.UTF_8));
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Внутренний перевод (самому себе) — Разные валюты (WebClient)")
+    void shouldWorkWithDifferentCurrenciesInSelfTransferTest() {
+        TransferDto dto = new TransferDto();
+        dto.setFromCurrency(Currency.USD);
+        dto.setToCurrency(Currency.RUB);
+        dto.setValue(new BigDecimal("100"));
+
+        OperationResultDto<TransferDto> successResponse = OperationResultDto.<TransferDto>builder()
+                .success(true)
+                .build();
+
+        when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
+                .thenReturn(Mono.just(successResponse));
+
+        Mono<String> result = transferService.sendMoneyToSelf(dto);
+
+        StepVerifier.create(result)
+                .assertNext(url -> {
+                    assertThat(url).contains("info=");
+                    assertThat(url).contains(URLEncoder.encode("Внутренний перевод", StandardCharsets.UTF_8));
+                })
+                .verifyComplete();
+    }
+
     @Test
     @DisplayName("Ошибка перевода — Сообщение от API")
     void shouldReturnErrorRedirectFromApiTest() {
@@ -129,19 +167,17 @@ class TransferFrontServiceImplTest {
 
         StepVerifier.create(result)
                 .assertNext(url -> {
-                    assertTrue(url.contains("error=" + URLEncoder.encode(apiErrorMessage, StandardCharsets.UTF_8)));
+                    assertThat(url).contains("error=" + URLEncoder.encode(apiErrorMessage, StandardCharsets.UTF_8));
                 })
                 .verifyComplete();
     }
 
-    /**
-     * Проверка обработки исключения при запросе (например, 500 ошибка сервера или обрыв связи).
-     */
     @Test
-    @DisplayName("Системное исключение — Редирект с текстом ошибки")
+    @DisplayName("Системное исключение — Проверка префикса ошибки")
     void shouldHandleWebClientExceptionTest() {
         TransferDto dto = new TransferDto();
-        dto.setLogin("user1");
+        dto.setFromCurrency(Currency.RUB);
+        dto.setLogin("user:RUB");
         dto.setValue(new BigDecimal("10"));
 
         when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
@@ -151,8 +187,8 @@ class TransferFrontServiceImplTest {
 
         StepVerifier.create(result)
                 .assertNext(url -> {
-                    assertTrue(url.contains("error="));
-                    assertTrue(url.contains(URLEncoder.encode("Ошибка перевода: Connection refused", StandardCharsets.UTF_8)));
+                    String expectedError = URLEncoder.encode("Сервис переводов недоступен", StandardCharsets.UTF_8);
+                    assertThat(url).contains(expectedError);
                 })
                 .verifyComplete();
     }

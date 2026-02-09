@@ -4,6 +4,7 @@ plugins {
     id 'maven-publish'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'org.springframework.cloud.contract' version '4.1.4'
+    id 'org.springframework.boot' version '3.5.8'
 }
 
 jacoco {
@@ -76,6 +77,7 @@ dependencies {
     accountIntegrationTestImplementation 'io.micrometer:micrometer-test'
     accountIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
     accountIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-contract-verifier'
+    accountIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-contract-wiremock'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -84,6 +86,10 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 jar {
+    enabled = false
+}
+
+bootJar {
     enabled = true
     archiveClassifier = ''
 }
@@ -113,10 +119,6 @@ tasks.named('processResources') {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-tasks.named('processAccountIntegrationTestResources') {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
 tasks.named('processTestResources') {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
@@ -125,7 +127,7 @@ check.dependsOn accountIntegrationTest
 
 contracts {
     testFramework = 'JUNIT5'
-    baseClassForTests = 'io.github.habatoo.controllers.BaseContractTest'
+    baseClassForTests = 'io.github.habatoo.controllers.BaseAccountContractTest'
     testMode = 'WEBTESTCLIENT'
     contractsDslDir = file("$projectDir/src/test/resources/contracts")
 }
@@ -141,4 +143,24 @@ publishing {
             artifact tasks.named("verifierStubsJar")
         }
     }
+}
+
+processResources {
+    from('src/main/resources') {
+        include '**/*'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('bootJar') {
+    requiresUnpack '**/db/changelog/*.yaml'
+    from sourceSets.main.output
+}
+
+tasks.named('copyContracts') {
+    mustRunAfter tasks.named('bootJar')
+}
+
+tasks.named('verifierStubsJar') {
+    dependsOn tasks.named('bootJar')
 }

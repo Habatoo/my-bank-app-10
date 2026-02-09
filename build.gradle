@@ -12,12 +12,6 @@ allprojects {
         mavenLocal()
     }
 
-    dependencyManagement {
-        imports {
-            mavenBom 'io.github.habatoo:bom:1.0-SNAPSHOT'
-        }
-    }
-
     tasks.withType(JavaCompile).tap {
         configureEach {
             options.encoding = 'UTF-8'

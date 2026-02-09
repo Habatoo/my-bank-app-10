@@ -2,6 +2,7 @@ plugins {
     id 'java-library'
     id 'jacoco'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.springframework.boot' version '3.5.8'
 }
 
 jacoco {
@@ -46,6 +47,7 @@ dependencies {
     api 'org.springframework.boot:spring-boot-starter-thymeleaf'
     api 'org.springframework.boot:spring-boot-starter-oauth2-client'
     api 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    api 'org.springframework.cloud:spring-cloud-starter-gateway-server-webflux'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
@@ -66,7 +68,6 @@ dependencies {
     gatewayIntegrationTestImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
     gatewayIntegrationTestImplementation 'com.squareup.okhttp3:mockwebserver'
     gatewayIntegrationTestImplementation 'io.micrometer:micrometer-test'
-    gatewayIntegrationTestImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -75,6 +76,10 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 jar {
+    enabled = false
+}
+
+bootJar {
     enabled = true
     archiveClassifier = ''
 }
@@ -108,3 +113,16 @@ tasks.named('processTestResources') {
 }
 
 check.dependsOn gatewayIntegrationTest
+
+
+processResources {
+    from('src/main/resources') {
+        include '**/*'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('bootJar') {
+    requiresUnpack '**/*.yaml'
+    from sourceSets.main.output
+}

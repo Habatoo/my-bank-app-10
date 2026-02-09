@@ -1,6 +1,7 @@
 package io.github.habatoo.repositories;
 
 import io.github.habatoo.BaseAccountTest;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.models.Account;
 import io.github.habatoo.models.User;
 import org.junit.jupiter.api.DisplayName;
@@ -29,7 +30,7 @@ class AccountAndUserRepositoryIntegrationTest extends BaseAccountTest {
     @DisplayName("Поиск аккаунта по userId — Пустой Mono если не найден")
     void findByUserIdShouldReturnEmptyWhenNotExistsTest() {
         var resultMono = clearDatabase()
-                .then(accountRepository.findByUserId(UUID.randomUUID()));
+                .then(accountRepository.findByUserIdAndCurrency(UUID.randomUUID(), Currency.RUB));
 
         StepVerifier.create(resultMono)
                 .verifyComplete();
@@ -53,11 +54,12 @@ class AccountAndUserRepositoryIntegrationTest extends BaseAccountTest {
                             .id(UUID.randomUUID())
                             .userId(savedUser.getId())
                             .balance(new BigDecimal(balance))
+                            .currency(Currency.RUB)
                             .build();
                     return accountRepository.save(account)
                             .thenReturn(savedUser.getId());
                 })
-                .flatMap(savedUserId -> accountRepository.findByUserId(savedUserId));
+                .flatMap(savedUserId -> accountRepository.findByUserIdAndCurrency(savedUserId, Currency.RUB));
 
         StepVerifier.create(action)
                 .assertNext(found -> {

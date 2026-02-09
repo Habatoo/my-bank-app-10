@@ -7,7 +7,7 @@ import org.springframework.context.event.EventListener;
 
 /**
  * Автоконфигурация для мониторинга обновления свойств.
- * Логирует факт успешного обновления конфигурации через Actuator или Consul.
+ * Логирует факт успешного обновления конфигурации через Actuator.
  */
 @Slf4j
 @AutoConfiguration

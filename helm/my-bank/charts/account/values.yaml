@@ -1,0 +1,11 @@
+image:
+  repository: account
+  tag: ""
+
+database:
+  host: bank-dev-account-db
+  name: account_db
+
+keycloak:
+  host: keycloak
+  port: 8080

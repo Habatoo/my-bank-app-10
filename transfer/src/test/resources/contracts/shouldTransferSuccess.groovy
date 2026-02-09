@@ -3,33 +3,32 @@ package contracts
 import org.springframework.cloud.contract.spec.Contract
 
 Contract.make {
-    description "Успешный перевод от пользователя senderUser к получателю targetUser"
-
     request {
         method 'POST'
-        urlPath '/transfer'
+        urlPath('/transfer')
         headers {
-            contentType('application/x-www-form-urlencoded')
+            contentType(applicationJson())
             header('Authorization', 'Bearer dummy-token')
         }
         body([
-                value  : 100.0,
-                account: 'targetUser'
+                login: "targetUser",
+                value: 100.00,
+                fromCurrency: "RUB",
+                toCurrency: "RUB"
         ])
     }
-
     response {
         status 200
-        headers {
-            contentType('application/json')
-        }
-        body(
+        headers { contentType(applicationJson()) }
+        body([
                 success: true,
                 message: "Перевод успешно выполнен",
                 data: [
                         login: 'targetUser',
-                        value: 100.0
+                        value: 100.00,
+                        fromCurrency: 'RUB',
+                        toCurrency: 'RUB',
                 ]
-        )
+        ])
     }
 }

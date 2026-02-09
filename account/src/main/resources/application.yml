@@ -2,61 +2,28 @@ spring:
   application:
     name: account
 
-  config:
-    import: "optional:consul:${CONSUL_HOST:localhost}:8500"
-  cloud:
-    consul:
-      host: ${CONSUL_HOST:localhost}
-      port: 8500
-      discovery:
-        prefer-ip-address: true
-        health-check-path: /actuator/health
-        health-check-interval: 10s
-        instance-id: ${spring.application.name}:${random.value}
-      config:
-        enabled: true
-        format: yaml
-        prefixes: [ config ]
-        defaultContext: application
-        watch:
-          enabled: true
-          delay: 1000
-
   r2dbc:
-    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_ACCOUNT_PORT:5433}/${DB_ACCOUNT_NAME:account_db}?sslMode=disable
+    url: r2dbc:postgresql://${DB_ACCOUNT_HOST:bank-dev-account-db.dev.svc.cluster.local}:${DB_ACCOUNT_PORT:5432}/${DB_ACCOUNT_NAME:account_db}?sslMode=disable
     username: ${DB_USER_NAME:bank_admin}
     password: ${DB_PASSWORD:bank_password}
-    pool:
-      enabled: true
-      initial-size: 10
-      max-size: 50
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_ACCOUNT_PORT:5433}/${DB_ACCOUNT_NAME:account_db}?sslMode=disable
+    url: jdbc:postgresql://${DB_ACCOUNT_HOST:bank-dev-account-db.dev.svc.cluster.local}:${DB_ACCOUNT_PORT:5432}/${DB_ACCOUNT_NAME:account_db}?sslMode=disable
     username: ${DB_USER_NAME:bank_admin}
     password: ${DB_PASSWORD:bank_password}
-    driver-class-name: org.postgresql.Driver
 
   liquibase:
     change-log: classpath:db/changelog/account/db.changelog-master.yaml
-    enabled: ${LIQUIBASE_ENABLED:true}
-    default-schema: ${DB_SCHEMA:public}
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_ACCOUNT_PORT:5433}/${DB_ACCOUNT_NAME:account_db}?sslMode=disable
+    url: jdbc:postgresql://${DB_ACCOUNT_HOST:bank-dev-account-db.dev.svc.cluster.local}:${DB_ACCOUNT_PORT:5432}/${DB_ACCOUNT_NAME:account_db}?sslMode=disable
     user: ${DB_USER_NAME:bank_admin}
     password: ${DB_PASSWORD:bank_password}
     contexts: dev,test,default
-
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: validate
 
   security:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://${KEYCLOAK_HOST:localhost}:8082/realms/${KEYCLOAK_REALM:bank}/protocol/openid-connect/certs
-          issuer-uri: http://${KEYCLOAK_HOST:localhost}:8082/realms/${KEYCLOAK_REALM:bank}
+          jwk-set-uri: http://keycloak/realms/bank/protocol/openid-connect/certs
       client:
         registration:
           keycloak:
@@ -67,7 +34,4 @@ spring:
             scope: openid
         provider:
           keycloak:
-            issuer-uri: http://${KEYCLOAK_HOST:localhost}:${KEYCLOAK_PORT:8082}/realms/${KEYCLOAK_REALM:bank}
-
-server:
-  port: ${SPRING_ACCOUNT_PORT:8083}
+            issuer-uri: http://keycloak/realms/bank

@@ -1,24 +1,24 @@
 package io.github.habatoo.services.impl;
 
-import io.github.habatoo.dto.AccountFullResponseDto;
+import io.github.habatoo.dto.AccountDto;
+import io.github.habatoo.dto.AccountShortDto;
+import io.github.habatoo.dto.UserProfileResponseDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.services.FrontService;
-import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.habatoo.services.RateClientService;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.result.view.Rendering;
 import reactor.core.publisher.Mono;
-import reactor.util.function.Tuple2;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.List;
-
-import static io.github.habatoo.constants.ApiConstants.BASE_GATEWAY_URL;
 
 /**
  * {@inheritDoc}
@@ -29,64 +29,85 @@ import static io.github.habatoo.constants.ApiConstants.BASE_GATEWAY_URL;
 public class FrontServiceImpl implements FrontService {
 
     private final WebClient webClient;
+    private final RateClientService rateClientService;
     private final CircuitBreakerRegistry registry;
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Mono<Rendering> showMainPage(String info, String error) {
-        return fetchAccountData()
-                .zipWith(fetchAllAccounts())
+        return fetchUserProfile()
+                .zipWith(fetchOtherUsers())
                 .map(tuple -> {
-                    AccountFullResponseDto account = tuple.getT1();
+                    UserProfileResponseDto profile = tuple.getT1();
+                    List<AccountShortDto> otherUsers = tuple.getT2();
 
-                    return getRendering(info, error, tuple, account);
+                    return Rendering.view("main")
+                            .modelAttribute("name", profile.getName())
+                            .modelAttribute("login", profile.getLogin())
+                            .modelAttribute("birthdate", profile.getBirthDate())
+                            .modelAttribute("sum", calculateTotalBalance(profile.getAccounts()))
+                            .modelAttribute("userAccounts", profile.getAccounts())
+                            .modelAttribute("accounts", otherUsers)
+                            .modelAttribute("info", info)
+                            .modelAttribute("errors", error != null ? List.of(error) : null)
+                            .build();
+                })
+                .onErrorResume(e -> {
+                    log.error("Ошибка загрузки данных главной страницы: {}", e.getMessage());
+                    return Mono.just(Rendering.view("main")
+                            .modelAttribute("errors", List.of("Сервис временно недоступен"))
+                            .build());
                 });
     }
 
-    private Rendering getRendering(
-            String info,
-            String error,
-            Tuple2<AccountFullResponseDto, List<AccountFullResponseDto>> tuple,
-            AccountFullResponseDto account) {
-        return Rendering.view("main")
-                .modelAttribute("account", account)
-                .modelAttribute("name", account.getName())
-                .modelAttribute("birthdate", account.getBirthDate())
-                .modelAttribute("sum", account.getBalance())
-                .modelAttribute("accounts", tuple.getT2())
-                .modelAttribute("info", info)
-                .modelAttribute("errors", error != null ? List.of(error) : null)
-                .build();
+    /**
+     * Получает профиль текущего пользователя и все его счета.
+     */
+    private Mono<UserProfileResponseDto> fetchUserProfile() {
+        return webClient.get()
+                .uri("/api/main/user")
+                .retrieve()
+                .bodyToMono(UserProfileResponseDto.class)
+                .transformDeferred(CircuitBreakerOperator.of(registry.circuitBreaker("accountServiceCB")))
+                .doOnError(e -> log.error("Error fetching profile: {}", e.getMessage()));
     }
 
-    private Mono<AccountFullResponseDto> fetchAccountData() {
-        return ReactiveSecurityContextHolder.getContext()
-                .map(SecurityContext::getAuthentication)
-                .flatMap(auth -> {
-                    log.info("Sending GET request to: {}/main/user", BASE_GATEWAY_URL);
-                    return webClient.get()
-                            .uri(BASE_GATEWAY_URL + "/main/user")
-                            .retrieve()
-                            .bodyToMono(AccountFullResponseDto.class);
-                })
-                .switchIfEmpty(Mono.error(new RuntimeException("User data not found")));
-    }
-
-    private Mono<List<AccountFullResponseDto>> fetchAllAccounts() {
-        CircuitBreaker cb = registry.circuitBreaker("gateway-cb");
-
-        return ReactiveSecurityContextHolder.getContext()
-                .map(SecurityContext::getAuthentication)
-                .flatMapMany(auth -> webClient.get()
-                        .uri(BASE_GATEWAY_URL + "/main/users")
-                        .retrieve()
-                        .bodyToFlux(AccountFullResponseDto.class)
-                        .transformDeferred(CircuitBreakerOperator.of(cb))
-                )
+    /**
+     * Получает список других пользователей системы для переводов.
+     */
+    private Mono<List<AccountShortDto>> fetchOtherUsers() {
+        return webClient.get()
+                .uri("/api/main/users")
+                .retrieve()
+                .bodyToFlux(AccountShortDto.class)
+                .transformDeferred(CircuitBreakerOperator.of(registry.circuitBreaker("accountServiceCB")))
                 .collectList()
-                .onErrorReturn(Collections.emptyList())
-                .switchIfEmpty(Mono.just(Collections.emptyList()));
+                .onErrorReturn(Collections.emptyList());
+    }
+
+    /**
+     * Суммирует балансы всех счетов пользователя, переводя каждый в RUB.
+     */
+    private BigDecimal calculateTotalBalance(List<AccountDto> accounts) {
+        if (accounts == null || accounts.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return accounts.stream()
+                .map(acc -> calcAmount(acc.getBalance(), acc.getCurrency(), Currency.RUB))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Конвертирует сумму из одной валюты в другую через RateClientService.
+     */
+    private BigDecimal calcAmount(BigDecimal value, Currency fromCurrency, Currency toCurrency) {
+        if (value == null) return BigDecimal.ZERO;
+        try {
+            BigDecimal rate = rateClientService.takeRate(fromCurrency, toCurrency);
+            return rate.multiply(value);
+        } catch (Exception e) {
+            log.warn("Не удалось получить курс для {} -> {}: {}", fromCurrency, toCurrency, e.getMessage());
+            return fromCurrency == toCurrency ? value : BigDecimal.ZERO;
+        }
     }
 }

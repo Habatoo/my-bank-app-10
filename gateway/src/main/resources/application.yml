@@ -4,32 +4,23 @@ spring:
   main:
     allow-bean-definition-overriding: true
 
-  config:
-    import: "optional:consul:${CONSUL_HOST:localhost}:8500"
   cloud:
-    consul:
-      host: ${CONSUL_HOST:localhost}
-      port: 8500
-      discovery:
-        prefer-ip-address: true
-        health-check-path: /actuator/health
-        health-check-interval: 10s
-        instance-id: ${spring.application.name}:${random.value}
-      config:
-        enabled: true
-        format: yaml
-        prefixes: [ config ]
-        defaultContext: application
-        watch:
-          enabled: true
-          delay: 1000
-
     gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
       server:
         webflux:
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
           routes:
             - id: registration-route
-              uri: lb://account
+              uri: http://account:8080
               predicates:
                 - Path=/api/account/register
               filters:
@@ -37,10 +28,11 @@ spring:
                   args:
                     name: accountServiceCB
                     fallbackUri: forward:/fallback/account-unavailable
+
             - id: account-service
-              uri: lb://account
+              uri: http://account:8080
               predicates:
-                - Path=/api/main/user, /api/main/users, /api/account/update, /api/account/balance
+                - Path=/api/main/user, /api/main/users, /api/account/update, /api/account/balance, /api/account/password, /api/account/account, /api/account/open-account
               filters:
                 - TokenRelay=
                 - StripPrefix=2
@@ -48,8 +40,9 @@ spring:
                   args:
                     name: accountServiceCB
                     fallbackUri: forward:/fallback/account-unavailable
+
             - id: cash-service
-              uri: lb://cash
+              uri: http://cash:8080
               predicates:
                 - Path=/api/main/cash
               filters:
@@ -59,10 +52,11 @@ spring:
                   args:
                     name: cashServiceCB
                     fallbackUri: forward:/fallback/cash-unavailable
+
             - id: transfer-service
-              uri: lb://transfer
+              uri: http://transfer:8080
               predicates:
-                - Path=/api/main/transfer
+                - Path=/api/main/transfer, /api/main/self-transfer
               filters:
                 - TokenRelay=
                 - StripPrefix=2
@@ -75,18 +69,15 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://${KEYCLOAK_HOST:localhost}:8082/realms/${KEYCLOAK_REALM:bank}/protocol/openid-connect/certs
+          jwk-set-uri: http://keycloak/realms/bank/protocol/openid-connect/certs
       client:
         registration:
           keycloak:
             provider: keycloak
-            client-id: front-ui
+            client-id: gateway
             client-secret: ${KEYCLOAK_GATEWAY_SECRET:g7777777-8888-9999-aaaa-bbbbccccdddd}
             authorization-grant-type: authorization_code
             scope: openid,profile,email
         provider:
           keycloak:
-            issuer-uri: http://localhost:8082/realms/bank
-
-server:
-  port: 8090
+            issuer-uri: http://keycloak/realms/bank

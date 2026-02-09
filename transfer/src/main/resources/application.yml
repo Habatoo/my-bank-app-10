@@ -1,29 +1,11 @@
 spring:
   application:
     name: transfer
-
-  config:
-    import: "optional:consul:${CONSUL_HOST:localhost}:8500"
-  cloud:
-    consul:
-      host: ${CONSUL_HOST:localhost}
-      port: 8500
-      discovery:
-        prefer-ip-address: true
-        health-check-path: /actuator/health
-        health-check-interval: 10s
-        instance-id: ${spring.application.name}:${random.value}
-      config:
-        enabled: true
-        format: yaml
-        prefixes: [ config ]
-        defaultContext: application
-        watch:
-          enabled: true
-          delay: 1000
+    gateway:
+      host: ${GATEWAY_HOST:http://account:8080}
 
   r2dbc:
-    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_TRANSFER_PORT:5436}/${DB_TRANSFER_NAME:transfer_db}
+    url: r2dbc:postgresql://${DB_TRANSFER_HOST:localhost}:${DB_TRANSFER_PORT:5432}/${DB_TRANSFER_NAME:transfer_db}
     username: ${DB_USER_NAME:bank_admin}
     password: ${DB_PASSWORD:bank_password}
     pool:
@@ -32,7 +14,7 @@ spring:
       max-size: 50
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_TRANSFER_PORT:5436}/${DB_TRANSFER_NAME:transfer_db}
+    url: jdbc:postgresql://${DB_TRANSFER_HOST:localhost}:${DB_TRANSFER_PORT:5432}/${DB_TRANSFER_NAME:transfer_db}
     username: ${DB_USER_NAME:bank_admin}
     password: ${DB_PASSWORD:bank_password}
     driver-class-name: org.postgresql.Driver
@@ -41,22 +23,17 @@ spring:
     enabled: ${LIQUIBASE_ENABLED:true}
     change-log: classpath:db/changelog/transfer/db.changelog-master.yaml
     default-schema: ${DB_SCHEMA:public}
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_TRANSFER_PORT:5436}/${DB_TRANSFER_NAME:transfer_db}
+    url: jdbc:postgresql://${DB_TRANSFER_HOST:localhost}:${DB_TRANSFER_PORT:5432}/${DB_TRANSFER_NAME:transfer_db}
     user: ${DB_USER_NAME:bank_admin}
     password: ${DB_PASSWORD:bank_password}
     contexts: dev,test,default
-
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: validate
 
   security:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://${KEYCLOAK_HOST:localhost}:8082/realms/${KEYCLOAK_REALM:bank}/protocol/openid-connect/certs
-          issuer-uri: http://${KEYCLOAK_HOST:localhost}:8082/realms/${KEYCLOAK_REALM:bank}
+          jwk-set-uri: http://keycloak/realms/bank/protocol/openid-connect/certs
+          issuer-uri: http://keycloak/realms/bank
       client:
         registration:
           keycloak:
@@ -67,7 +44,4 @@ spring:
             scope: openid
         provider:
           keycloak:
-            issuer-uri: http://${KEYCLOAK_HOST:localhost}:${KEYCLOAK_PORT:8082}/realms/${KEYCLOAK_REALM:bank}
-
-server:
-  port: ${SPRING_TRANSFER_PORT:8086}
+            issuer-uri: http://keycloak/realms/bank

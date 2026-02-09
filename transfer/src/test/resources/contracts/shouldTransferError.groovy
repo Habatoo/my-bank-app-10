@@ -3,29 +3,30 @@ package contracts
 import org.springframework.cloud.contract.spec.Contract
 
 Contract.make {
-    description "Ошибка списания средств у отправителя возвращает success=false"
+    description "Попытка перевода при недостатке средств возвращает success=false"
 
     request {
         method 'POST'
-        urlPath '/transfer'
+        urlPath('/transfer')
         headers {
-            contentType('application/x-www-form-urlencoded')
+            contentType(applicationJson())
             header('Authorization', 'Bearer dummy-token')
         }
         body([
-                value  : 1000.0,
-                account: 'targetUser'
+                login: "targetUser",
+                value: 50.00,
+                fromCurrency: "RUB",
+                toCurrency: "RUB"
         ])
     }
-
     response {
         status 200
         headers {
-            contentType('application/json')
+            contentType(applicationJson())
         }
-        body(
+        body([
                 success: false,
                 message: "Ошибка списания: Недостаточно средств"
-        )
+        ])
     }
 }

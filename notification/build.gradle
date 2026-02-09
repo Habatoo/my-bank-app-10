@@ -4,6 +4,7 @@ plugins {
     id 'maven-publish'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'org.springframework.cloud.contract' version '4.1.4'
+    id 'org.springframework.boot' version '3.5.8'
 }
 
 jacoco {
@@ -59,6 +60,10 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+    testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
+    contractTestImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
+    testImplementation 'io.rest-assured:spring-web-test-client'
+
     notificationIntegrationTestImplementation 'org.springframework.boot:spring-boot-starter-test'
     notificationIntegrationTestImplementation 'io.projectreactor:reactor-test'
     notificationIntegrationTestImplementation 'org.springframework.security:spring-security-test'
@@ -80,6 +85,10 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 jar {
+    enabled = false
+}
+
+bootJar {
     enabled = true
     archiveClassifier = ''
 }
@@ -132,4 +141,24 @@ publishing {
             artifact tasks.named("verifierStubsJar")
         }
     }
+}
+
+processResources {
+    from('src/main/resources') {
+        include '**/*'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('bootJar') {
+    requiresUnpack '**/db/changelog/*.yaml'
+    from sourceSets.main.output
+}
+
+tasks.named('copyContracts') {
+    mustRunAfter tasks.named('bootJar')
+}
+
+tasks.named('verifierStubsJar') {
+    dependsOn tasks.named('bootJar')
 }

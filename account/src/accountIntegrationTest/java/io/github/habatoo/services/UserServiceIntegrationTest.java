@@ -3,6 +3,7 @@ package io.github.habatoo.services;
 import io.github.habatoo.BaseAccountTest;
 import io.github.habatoo.dto.NotificationEvent;
 import io.github.habatoo.dto.UserUpdateDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.models.Account;
 import io.github.habatoo.models.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +49,6 @@ class UserServiceIntegrationTest extends BaseAccountTest {
                 .assertNext(dto -> {
                     assertThat(dto.getLogin()).isEqualTo("new_user");
                     assertThat(dto.getName()).isEqualTo("John Doe");
-                    assertThat(dto.getBalance()).isEqualByComparingTo("500.00");
                 })
                 .verifyComplete();
 
@@ -67,7 +67,7 @@ class UserServiceIntegrationTest extends BaseAccountTest {
         var setup = clearDatabase()
                 .then(userRepository.save(user))
                 .flatMap(u -> accountRepository.save(
-                        Account.builder().userId(u.getId()).balance(BigDecimal.ZERO).build()));
+                        Account.builder().userId(u.getId()).balance(BigDecimal.ZERO).currency(Currency.RUB).build()));
 
         StepVerifier.create(setup.then(userService.updateProfile(login, updateDto)))
                 .assertNext(dto -> {
@@ -93,12 +93,11 @@ class UserServiceIntegrationTest extends BaseAccountTest {
         var setup = clearDatabase()
                 .then(userRepository.save(user))
                 .flatMap(u -> accountRepository.save(
-                        Account.builder().userId(u.getId()).balance(BigDecimal.TEN).build()));
+                        Account.builder().userId(u.getId()).balance(BigDecimal.TEN).currency(Currency.RUB).build()));
 
         StepVerifier.create(setup.then(userService.getOrCreateUser(jwt)))
                 .assertNext(dto -> {
                     assertThat(dto.getLogin()).isEqualTo(login);
-                    assertThat(dto.getBalance()).isEqualByComparingTo("10.00");
                 })
                 .verifyComplete();
 

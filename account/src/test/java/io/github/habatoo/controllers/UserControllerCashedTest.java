@@ -2,6 +2,7 @@ package io.github.habatoo.controllers;
 
 import io.github.habatoo.configurations.SecurityChassisAutoConfiguration;
 import io.github.habatoo.dto.AccountFullResponseDto;
+import io.github.habatoo.dto.UserProfileResponseDto;
 import io.github.habatoo.dto.UserUpdateDto;
 import io.github.habatoo.services.UserService;
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +22,7 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -63,6 +65,11 @@ class UserControllerCashedTest {
     @DisplayName("GET /user - Успешное получение данных профиля")
     void getCurrentUserSuccess() {
         String username = "test_user";
+        UserProfileResponseDto mockDtoUser = new UserProfileResponseDto(
+                username,
+                "Иван Иванов",
+                LocalDate.now(),
+                List.of());
         AccountFullResponseDto responseDto = AccountFullResponseDto.builder()
                 .login(username)
                 .name("Иван Иванов")
@@ -70,7 +77,7 @@ class UserControllerCashedTest {
                 .birthDate(LocalDate.of(1990, 5, 15))
                 .build();
 
-        when(userService.getOrCreateUser(any())).thenReturn(Mono.just(responseDto));
+        when(userService.getOrCreateUser(any())).thenReturn(Mono.just(mockDtoUser));
 
         webTestClient
                 .mutateWith(mockJwt()
@@ -83,8 +90,7 @@ class UserControllerCashedTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.login").isEqualTo(username)
-                .jsonPath("$.name").isEqualTo("Иван Иванов")
-                .jsonPath("$.balance").isEqualTo(1500.00);
+                .jsonPath("$.name").isEqualTo("Иван Иванов");
     }
 
     /**

@@ -21,14 +21,10 @@ Contract.make {
     response {
         status 200
         headers {
-            contentType('application/json')
+            contentType('text/html')
         }
-        body([
-                templateName: "main",
-                model: [
-                        info : $(producer('Операция выполнена'), consumer('Операция выполнена')),
-                        error: $(producer('Произошла ошибка'), consumer('Произошла ошибка'))
-                ]
-        ])
+        body(
+                $(producer(regex('(?s).*CHASSIS.*BANK.*')), consumer('<html>CHASSIS BANK</html>'))
+        )
     }
 }

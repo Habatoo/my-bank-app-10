@@ -1,17 +1,24 @@
 package io.github.habatoo;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.habatoo.base.BaseTest;
 import io.github.habatoo.dto.UserUpdateDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.models.Account;
 import io.github.habatoo.models.User;
 import io.github.habatoo.repositories.AccountRepository;
 import io.github.habatoo.repositories.UserRepository;
-import io.github.habatoo.services.AccountService;
-import io.github.habatoo.services.OutboxClientService;
-import io.github.habatoo.services.OutboxService;
-import io.github.habatoo.services.UserService;
+import io.github.habatoo.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.oauth2.client.reactive.ReactiveOAuth2ClientAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.server.ServerOAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -32,13 +39,16 @@ import java.util.UUID;
         classes = AccountApplication.class,
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
-                "spring.cloud.consul.enabled=false",
-                "spring.cloud.consul.config.enabled=false",
                 "spring.cloud.compatibility-verifier.enabled=false",
                 "spring.main.allow-bean-definition-overriding=true",
                 "spring.liquibase.enabled=false"
         }
 )
+@EnableAutoConfiguration(exclude = {
+        ReactiveSecurityAutoConfiguration.class,
+        ReactiveOAuth2ClientAutoConfiguration.class,
+        OAuth2ClientAutoConfiguration.class
+})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public abstract class BaseAccountTest extends BaseTest {
 
@@ -51,14 +61,32 @@ public abstract class BaseAccountTest extends BaseTest {
     @Autowired
     protected AccountRepository accountRepository;
 
-    @MockitoBean
-    protected OutboxClientService outboxClientService;
-
     @Autowired
     protected OutboxService outboxService;
 
     @Autowired
     protected AccountService accountService;
+
+    @Autowired
+    protected ObjectMapper objectMapper;
+
+    @MockitoBean
+    protected OutboxClientService outboxClientService;
+
+    @MockitoBean
+    protected NotificationClientService notificationClientService;
+
+    @MockitoBean
+    protected ReactiveClientRegistrationRepository reactiveClientRegistrationRepository;
+
+    @MockitoBean
+    protected ServerOAuth2AuthorizedClientRepository serverOAuth2AuthorizedClientRepository;
+
+    @MockitoBean
+    protected ReactiveOAuth2AuthorizedClientService reactiveOAuth2AuthorizedClientService;
+
+    @MockitoBean
+    protected ReactiveJwtDecoder reactiveJwtDecoder;
 
     @DynamicPropertySource
     static void specificProperties(DynamicPropertyRegistry registry) {
@@ -89,6 +117,7 @@ public abstract class BaseAccountTest extends BaseTest {
         return Account.builder()
                 .userId(userId)
                 .balance(new BigDecimal(balance.toString()))
+                .currency(Currency.RUB)
                 .build();
     }
 }

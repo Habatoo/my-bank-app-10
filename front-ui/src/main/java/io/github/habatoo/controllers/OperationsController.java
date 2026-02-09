@@ -10,7 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.reactive.result.view.RedirectView;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -33,45 +35,68 @@ public class OperationsController {
     private final UserFrontService userFrontService;
 
     /**
-     * Обрабатывает операции с наличными средствами (пополнение или снятие).
-     *
-     * @param cashDto объект передачи данных, содержащий сумму операции и тип действия.
-     * @return {@link Mono} со строкой перенаправления на главную страницу с результатом операции.
+     * Обрабатывает операции с наличными.
+     * Теперь CashDto должен содержать поле 'currency', приходящее из выпадающего списка.
      */
     @PostMapping("/cash")
     @PreAuthorize("isAuthenticated()")
     public Mono<String> handleCash(@ModelAttribute CashDto cashDto) {
-        log.debug("Обработка операции с наличными: {}", cashDto);
+        log.debug("Операция с наличными в валюте {}: {}", cashDto.getCurrency(), cashDto);
         return cashFrontService.moveMoney(cashDto);
     }
 
     /**
-     * Обрабатывает запрос на перевод денежных средств другому клиенту банка.
-     *
-     * @param transferDto объект передачи данных, содержащий логин получателя и сумму перевода.
-     * @return {@link Mono} со строкой перенаправления, содержащей сообщение об успехе или ошибке.
+     * Перевод другому клиенту.
+     * TransferDto теперь включает 'fromAccountCurrency' для выбора счета списания.
      */
     @PostMapping("/transfer")
     @PreAuthorize("isAuthenticated()")
     public Mono<String> handleTransfer(@ModelAttribute TransferDto transferDto) {
-        log.debug("Обработка перевода средств: {}", transferDto);
+        log.debug("Перевод клиенту {} со счета {}: в {} {}",
+                transferDto.getLogin(), transferDto.getFromCurrency(),
+                transferDto.getFromCurrency(), transferDto.getValue());
         return transferFrontService.sendMoney(transferDto);
     }
 
     /**
-     * Обрабатывает изменение персональных данных в профиле пользователя.
-     * <p>
-     * Извлекает данные формы из {@link ServerWebExchange} и инициирует обновление
-     * через сервис пользователей.
-     * </p>
-     *
-     * @param exchange текущий обмен данными сервера (контекст запроса).
-     * @return {@link Mono} с объектом {@link RedirectView} для возврата на главную страницу.
+     * НОВЫЙ МЕТОД: Перевод между своими счетами.
+     * Обрабатывает логику конвертации внутри аккаунта пользователя.
+     */
+    @PostMapping("/self-transfer")
+    @PreAuthorize("isAuthenticated()")
+    public Mono<String> handleSelfTransfer(@ModelAttribute TransferDto transferDto) {
+        log.debug("Внутренний перевод: из {} в {}",
+                transferDto.getFromCurrency(), transferDto.getToCurrency());
+        return transferFrontService.sendMoneyToSelf(transferDto);
+    }
+
+    /**
+     * Обновление профиля.
      */
     @PostMapping("/account")
     @PreAuthorize("isAuthenticated()")
     public Mono<RedirectView> updateProfile(ServerWebExchange exchange) {
-        log.debug("Запрос на обновление профиля пользователя");
+        log.debug("Запрос на обновление профиля");
         return userFrontService.updateProfile(exchange);
+    }
+
+    /**
+     * Смена пароля.
+     */
+    @PostMapping("/password")
+    @PreAuthorize("isAuthenticated()")
+    public Mono<RedirectView> changePassword(ServerWebExchange exchange) {
+        log.debug("Запрос на смену пароля");
+        return userFrontService.updatePassword(exchange);
+    }
+
+    /**
+     * Открытие нового счета.
+     * Теперь принимает параметр из формы (RUB, USD, CNY).
+     */
+    @PostMapping("/open-account")
+    @PreAuthorize("isAuthenticated()")
+    public Mono<RedirectView> openAccount(ServerWebExchange exchange) {
+        return userFrontService.openNewAccount(exchange);
     }
 }

@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS transfers (
     sender_username VARCHAR(50) NOT NULL,
     target_username VARCHAR(50) NOT NULL,
     amount DECIMAL(19, 4) NOT NULL,
+    currency VARCHAR(20) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -18,6 +19,7 @@ COMMENT ON COLUMN transfers.id IS 'id отправителя средств';
 COMMENT ON COLUMN transfers.sender_username IS 'Логин отправителя средств';
 COMMENT ON COLUMN transfers.target_username IS 'Логин получателя средств';
 COMMENT ON COLUMN transfers.amount IS 'Сумма перевода';
+COMMENT ON COLUMN transfers.currency IS 'Валюта перевода';
 COMMENT ON COLUMN transfers.created_at IS 'Дата операции';
 
 COMMENT ON COLUMN outbox.id IS 'id события';

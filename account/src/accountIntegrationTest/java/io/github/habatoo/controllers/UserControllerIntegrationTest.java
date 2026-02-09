@@ -1,15 +1,20 @@
 package io.github.habatoo.controllers;
 
-import io.github.habatoo.AccountApplication;
+import io.github.habatoo.configurations.SecurityChassisAutoConfiguration;
+import io.github.habatoo.dto.AccountDto;
 import io.github.habatoo.dto.AccountFullResponseDto;
+import io.github.habatoo.dto.UserProfileResponseDto;
 import io.github.habatoo.dto.UserUpdateDto;
+import io.github.habatoo.repositories.AccountRepository;
+import io.github.habatoo.repositories.OutboxRepository;
+import io.github.habatoo.repositories.UserRepository;
 import io.github.habatoo.services.UserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientService;
@@ -21,6 +26,7 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -31,25 +37,22 @@ import static org.springframework.security.test.web.reactive.server.SecurityMock
  * Интеграционные тесты для {@link UserController}.
  * Проверяют цепочку безопасности и корректность маппинга ответов.
  */
-@SpringBootTest(
-        classes = AccountApplication.class,
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-                "server.port=0",
-                "spring.liquibase.enabled=false",
-                "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration,org.springdoc.core.configuration.SpringDocConfiguration",
-                "spring.cloud.consul.enabled=false",
-                "spring.cloud.consul.config.enabled=false",
-                "spring.cloud.compatibility-verifier.enabled=false",
-                "spring.main.allow-bean-definition-overriding=true"
-        }
-)
-@AutoConfigureWebTestClient
+@WebFluxTest(controllers = UserController.class)
+@Import(SecurityChassisAutoConfiguration.class)
 @DisplayName("Интеграционное тестирование UserController")
 class UserControllerIntegrationTest {
 
     @Autowired
     private WebTestClient webTestClient;
+
+    @MockitoBean
+    private AccountRepository accountRepository;
+
+    @MockitoBean
+    private UserRepository userRepository;
+
+    @MockitoBean
+    private OutboxRepository outboxRepository;
 
     @MockitoBean
     private UserService userService;
@@ -67,15 +70,19 @@ class UserControllerIntegrationTest {
     @DisplayName("GET /user - Успешное получение профиля")
     void getCurrentUserSuccessTest() {
         String mockUsername = "active_user";
+        UserProfileResponseDto mockDtoUser = new UserProfileResponseDto(
+                mockUsername,
+                "Иван Иванов",
+                LocalDate.of(1990, 5, 15),
+                List.of());
         AccountFullResponseDto expectedResponse = AccountFullResponseDto.builder()
                 .login(mockUsername)
-                .name("Ivan Ivanov")
-                .balance(new BigDecimal("1500.00"))
+                .name("Иван Иванов")
                 .birthDate(LocalDate.of(1990, 5, 15))
                 .build();
 
         when(userService.getOrCreateUser(any(Jwt.class)))
-                .thenReturn(Mono.just(expectedResponse));
+                .thenReturn(Mono.just(mockDtoUser));
 
         webTestClient
                 .mutateWith(mockJwt()

@@ -1,15 +1,19 @@
 package io.github.habatoo.controllers;
 
-import io.github.habatoo.AccountApplication;
+import io.github.habatoo.configurations.SecurityChassisAutoConfiguration;
 import io.github.habatoo.dto.AccountShortDto;
 import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.enums.Currency;
+import io.github.habatoo.repositories.AccountRepository;
+import io.github.habatoo.repositories.OutboxRepository;
+import io.github.habatoo.repositories.UserRepository;
 import io.github.habatoo.services.AccountService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
@@ -29,25 +33,22 @@ import static org.springframework.security.test.web.reactive.server.SecurityMock
  * Интеграционные тесты для {@link AccountController}.
  * Проверяют цепочку безопасности, работу аннотаций @PreAuthorize и корректность обработки JWT.
  */
-@SpringBootTest(
-        classes = AccountApplication.class,
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-                "server.port=0",
-                "spring.liquibase.enabled=false",
-                "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration,org.springdoc.core.configuration.SpringDocConfiguration",
-                "spring.cloud.consul.enabled=false",
-                "spring.cloud.consul.config.enabled=false",
-                "spring.cloud.compatibility-verifier.enabled=false",
-                "spring.main.allow-bean-definition-overriding=true"
-        }
-)
-@AutoConfigureWebTestClient
+@WebFluxTest(controllers = AccountController.class)
+@Import(SecurityChassisAutoConfiguration.class)
 @DisplayName("Интеграционное тестирование AccountController")
 class AccountControllerIntegrationTest {
 
     @Autowired
     private WebTestClient webTestClient;
+
+    @MockitoBean
+    private AccountRepository accountRepository;
+
+    @MockitoBean
+    private UserRepository userRepository;
+
+    @MockitoBean
+    private OutboxRepository outboxRepository;
 
     @MockitoBean
     private AccountService accountService;
@@ -69,7 +70,7 @@ class AccountControllerIntegrationTest {
     @DisplayName("GET /users - Успех для роли USER")
     void getListSuccessTest() {
         String mockUsername = "test_user";
-        AccountShortDto account = new AccountShortDto(mockUsername, "Test Account");
+        AccountShortDto account = new AccountShortDto(mockUsername, "Test Account", Currency.RUB);
 
         when(accountService.getOtherAccounts(mockUsername)).thenReturn(Flux.just(account));
 
@@ -112,7 +113,7 @@ class AccountControllerIntegrationTest {
                 .success(true)
                 .message("Баланс обновлен")
                 .build();
-        when(accountService.changeBalance(anyString(), any(BigDecimal.class)))
+        when(accountService.changeBalance(anyString(), any(BigDecimal.class), anyString()))
                 .thenReturn(Mono.just(successResult));
 
         webTestClient
@@ -123,6 +124,7 @@ class AccountControllerIntegrationTest {
                         .path("/balance")
                         .queryParam("login", "client1")
                         .queryParam("amount", "100.00")
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isOk()
@@ -142,6 +144,7 @@ class AccountControllerIntegrationTest {
                         .path("/balance")
                         .queryParam("login", "any")
                         .queryParam("amount", "10")
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isUnauthorized();

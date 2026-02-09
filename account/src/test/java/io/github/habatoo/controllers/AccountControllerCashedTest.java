@@ -3,6 +3,7 @@ package io.github.habatoo.controllers;
 import io.github.habatoo.configurations.SecurityChassisAutoConfiguration;
 import io.github.habatoo.dto.AccountShortDto;
 import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.enums.Currency;
 import io.github.habatoo.services.AccountService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,8 @@ import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -22,7 +25,7 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt;
 
@@ -62,7 +65,7 @@ class AccountControllerCashedTest {
     @DisplayName("GET /users - Успех при получении списка других пользователей")
     void getListSuccess() {
         String currentUser = "current_authorized_user";
-        AccountShortDto otherUser = new AccountShortDto("other_user", "Иван Иванов");
+        AccountShortDto otherUser = new AccountShortDto("other_user", "Иван Иванов", Currency.RUB);
 
         when(accountService.getOtherAccounts(currentUser)).thenReturn(Flux.just(otherUser));
 
@@ -88,13 +91,14 @@ class AccountControllerCashedTest {
     void updateBalanceInternalSuccess() {
         String targetLogin = "target_user";
         BigDecimal amount = new BigDecimal("500.00");
+        String currency = "RUB";
 
         OperationResultDto<Void> successResponse = OperationResultDto.<Void>builder()
                 .success(true)
                 .message("Баланс обновлен")
                 .build();
 
-        when(accountService.changeBalance(eq(targetLogin), eq(amount)))
+        when(accountService.changeBalance(eq(targetLogin), eq(amount), eq(currency)))
                 .thenReturn(Mono.just(successResponse));
 
         webTestClient
@@ -106,6 +110,7 @@ class AccountControllerCashedTest {
                         .path("/balance")
                         .queryParam("login", targetLogin)
                         .queryParam("amount", amount)
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isOk()
@@ -129,6 +134,7 @@ class AccountControllerCashedTest {
                         .path("/balance")
                         .queryParam("login", "any")
                         .queryParam("amount", 100)
+                        .queryParam("currency", "RUB")
                         .build())
                 .exchange()
                 .expectStatus().isForbidden();
@@ -145,5 +151,84 @@ class AccountControllerCashedTest {
                 .uri("/users")
                 .exchange()
                 .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    @DisplayName("Успешное открытие счета администратором")
+    void openAccountShouldReturnSuccessWhenUserIsAdminTest() {
+        String login = "testuser";
+        String currency = "USD";
+        OperationResultDto<Void> successResponse = OperationResultDto.<Void>builder()
+                .success(true)
+                .message("Счет успешно открыт")
+                .build();
+
+        when(accountService.openAccount(login, currency))
+                .thenReturn(Mono.just(successResponse));
+
+        webTestClient
+                .mutateWith(csrf())
+                .mutateWith(mockJwt()
+                        .jwt(j -> j.claim("preferred_username", login))
+                        .authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                .post()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/open-account")
+                        .queryParam("currency", currency)
+                        .build())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(true)
+                .jsonPath("$.message").isEqualTo("Счет успешно открыт");
+
+        verify(accountService, times(1)).openAccount(login, currency);
+    }
+
+    @Test
+    @DisplayName("Ошибка открытия счета при неверных параметрах")
+    void openAccountShouldReturnErrorWhenServiceFailsTest() {
+        String testLogin = "test_user";
+        OperationResultDto<Void> errorResponse = OperationResultDto.<Void>builder()
+                .success(false)
+                .errorCode("INVALID_CURRENCY")
+                .message("Допустимые валюты: RUB, USD, CNY")
+                .build();
+
+        when(accountService.openAccount(eq(testLogin), eq("EUR")))
+                .thenReturn(Mono.just(errorResponse));
+
+        webTestClient
+                .mutateWith(csrf())
+                .mutateWith(SecurityMockServerConfigurers.mockJwt()
+                        .jwt(jwt -> jwt.claim("preferred_username", testLogin))
+                        .authorities(new SimpleGrantedAuthority("ROLE_ACCOUNT_ACCESS")))
+                .post()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/open-account")
+                        .queryParam("currency", "EUR")
+                        .build())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(false)
+                .jsonPath("$.errorCode").isEqualTo("INVALID_CURRENCY");
+    }
+
+    @Test
+    @DisplayName("Доступ запрещен для пользователя без нужной роли")
+    @WithMockUser(roles = "GUEST")
+    void openAccountShouldReturnForbiddenWhenUserHasNoRightsTest() {
+        webTestClient
+                .mutateWith(csrf())
+                .post()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/open-account")
+                        .queryParam("currency", "RUB")
+                        .build())
+                .exchange()
+                .expectStatus().isForbidden();
+
+        verifyNoInteractions(accountService);
     }
 }

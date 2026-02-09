@@ -37,4 +37,8 @@ public interface UserFrontService {
      * на главную страницу после завершения операции с передачей статуса (успех/ошибка).
      */
     Mono<RedirectView> updateProfile(ServerWebExchange exchange);
+
+    Mono<RedirectView> updatePassword(ServerWebExchange exchange);
+
+    Mono<RedirectView> openNewAccount(ServerWebExchange exchange);
 }

@@ -3,7 +3,7 @@ package contracts
 import org.springframework.cloud.contract.spec.Contract
 
 Contract.make {
-    description "Успешная обработка уведомления"
+    description "Успешная обработка уведомления (DEPOSIT)"
 
     request {
         method 'POST'
@@ -17,8 +17,12 @@ Contract.make {
                 eventType: 'DEPOSIT',
                 status: 'SUCCESS',
                 message: 'Пополнение счета успешно',
-                sourceService: 'cash-service',
-                payload: [amount: 100.0, currency: 'RUB']
+                timestamp: '2026-01-29T10:00:00',
+                payload: [
+                        amount: 100.0,
+                        currency: 'RUB'
+                ],
+                sourceService: 'cash-service'
         )
     }
 

@@ -1,22 +1,24 @@
 package io.github.habatoo.services.impl;
 
+import io.github.habatoo.dto.OperationResultDto;
+import io.github.habatoo.dto.PasswordUpdateDto;
 import io.github.habatoo.dto.UserUpdateDto;
 import io.github.habatoo.services.UserFrontService;
-import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.result.view.RedirectView;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.server.WebSession;
 import reactor.core.publisher.Mono;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-
-import static io.github.habatoo.constants.ApiConstants.BASE_GATEWAY_URL;
 
 /**
  * {@inheritDoc}
@@ -29,42 +31,99 @@ public class UserFrontServiceImpl implements UserFrontService {
     private final WebClient webClient;
     private final CircuitBreakerRegistry registry;
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Mono<RedirectView> updateProfile(ServerWebExchange exchange) {
-        CircuitBreaker cb = registry.circuitBreaker("gateway-cb");
-
         return exchange.getFormData()
                 .flatMap(formData -> {
                     String name = formData.getFirst("name");
-                    String birthDateStr = formData.getFirst("birthdate");
+                    String birthdate = formData.getFirst("birthdate");
 
-                    if (name == null || birthDateStr == null) {
-                        return Mono.just(new RedirectView("/main?error=MissingFields"));
+                    if (name == null || birthdate == null || birthdate.isBlank()) {
+                        return Mono.just(errorRedirect("Данные не заполнены"));
                     }
 
-                    UserUpdateDto updateDto = new UserUpdateDto(name, LocalDate.parse(birthDateStr));
-
                     return webClient.patch()
-                            .uri(BASE_GATEWAY_URL + "/account/update")
-                            .bodyValue(updateDto)
+                            .uri("/api/account/update")
+                            .bodyValue(new UserUpdateDto(name, LocalDate.parse(birthdate)))
                             .retrieve()
                             .toBodilessEntity()
-                            .transformDeferred(CircuitBreakerOperator.of(cb))
-                            .map(response -> getRedirectView())
+                            .transformDeferred(CircuitBreakerOperator.of(registry.circuitBreaker("gateway-cb")))
+                            .thenReturn(infoRedirect("Профиль обновлен"))
                             .onErrorResume(e -> {
-                                log.error("Update error: ", e);
-                                return Mono.just(new RedirectView("/main?error=UpdateFailed"));
+                                log.error("Ошибка обновления профиля: {}", e.getMessage());
+                                return Mono.just(errorRedirect("Ошибка обновления"));
                             });
                 });
     }
 
-    private RedirectView getRedirectView() {
-        String info = UriComponentsBuilder.fromPath("")
-                .queryParam("info", "Профиль обновлен")
-                .build().encode().toUriString();
-        return new RedirectView("/main" + info);
+    @Override
+    public Mono<RedirectView> updatePassword(ServerWebExchange exchange) {
+        return exchange.getFormData()
+                .flatMap(formData -> {
+                    String password = formData.getFirst("password");
+                    String confirm = formData.getFirst("confirmPassword");
+
+                    if (password == null || password.isEmpty() || !password.equals(confirm)) {
+                        return Mono.just(errorRedirect("Пароли не совпадают"));
+                    }
+
+                    return webClient.post()
+                            .uri("/api/account/password")
+                            .bodyValue(new PasswordUpdateDto(password, confirm))
+                            .retrieve()
+                            .bodyToMono(Boolean.class)
+                            .transformDeferred(CircuitBreakerOperator.of(registry.circuitBreaker("gateway-cb")))
+                            .flatMap(success -> getRedirectView(exchange, success))
+                            .onErrorResume(e -> {
+                                log.error("Ошибка при смене пароля: {}", e.getMessage());
+                                return Mono.just(errorRedirect("Сервис безопасности недоступен"));
+                            });
+                });
+    }
+
+    @Override
+    public Mono<RedirectView> openNewAccount(ServerWebExchange exchange) {
+        return exchange.getFormData()
+                .flatMap(formData -> {
+                    String currency = formData.getFirst("currency");
+                    log.debug("Отправка запроса на открытие счета. Валюта: {}", currency);
+
+                    return webClient.post()
+                            .uri(uriBuilder -> uriBuilder
+                                    .path("/api/account/open-account")
+                                    .queryParam("currency", currency)
+                                    .build())
+                            .retrieve()
+                            .bodyToMono(new ParameterizedTypeReference<OperationResultDto<Void>>() {
+                            })
+                            .transformDeferred(CircuitBreakerOperator.of(registry.circuitBreaker("gateway-cb")))
+                            .map(res -> res.isSuccess()
+                                    ? infoRedirect("Счет в " + currency + " открыт")
+                                    : errorRedirect(res.getMessage()))
+                            .onErrorResume(e -> {
+                                log.error("Ошибка при открытии счета: {}", e.getMessage());
+                                return Mono.just(errorRedirect("Ошибка при открытии счета"));
+                            });
+                });
+    }
+
+    private Mono<RedirectView> getRedirectView(ServerWebExchange exchange, Boolean success) {
+        if (Boolean.TRUE.equals(success)) {
+            log.info("Пароль успешно изменен, завершаем сессию.");
+            return exchange.getSession()
+                    .flatMap(WebSession::invalidate)
+                    .then(Mono.just(new RedirectView("/logout")));
+        } else {
+            return Mono.just(errorRedirect("Не удалось обновить пароль"));
+        }
+    }
+
+
+    private RedirectView infoRedirect(String msg) {
+        return new RedirectView("/main?info=" + URLEncoder.encode(msg, StandardCharsets.UTF_8));
+    }
+
+    private RedirectView errorRedirect(String msg) {
+        return new RedirectView("/main?error=" + URLEncoder.encode(msg, StandardCharsets.UTF_8));
     }
 }

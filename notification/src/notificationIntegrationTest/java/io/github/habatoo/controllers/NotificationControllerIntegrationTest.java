@@ -35,8 +35,6 @@ import static org.springframework.security.test.web.reactive.server.SecurityMock
                 "server.port=0",
                 "spring.liquibase.enabled=false",
                 "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration,org.springdoc.core.configuration.SpringDocConfiguration",
-                "spring.cloud.consul.enabled=false",
-                "spring.cloud.consul.config.enabled=false",
                 "spring.cloud.compatibility-verifier.enabled=false",
                 "spring.main.allow-bean-definition-overriding=true"
         }

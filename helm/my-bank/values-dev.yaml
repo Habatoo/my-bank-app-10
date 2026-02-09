@@ -1,0 +1,44 @@
+global:
+  namespace: dev
+
+account:
+  replicaCount: 1
+  resources:
+    limits: { memory: "512Mi", cpu: "500m" }
+    requests: { memory: "256Mi", cpu: "100m" }
+
+cash:
+  replicaCount: 1
+  resources:
+    limits: { memory: "512Mi", cpu: "500m" }
+    requests: { memory: "256Mi", cpu: "100m" }
+
+notification:
+  replicaCount: 1
+  resources:
+    limits: { memory: "512Mi", cpu: "500m" }
+    requests: { memory: "256Mi", cpu: "100m" }
+
+transfer:
+  replicaCount: 1
+  resources:
+    limits: { memory: "512Mi", cpu: "500m" }
+    requests: { memory: "256Mi", cpu: "100m" }
+
+front-ui:
+  replicaCount: 1
+  resources:
+    limits: { memory: "512Mi", cpu: "500m" }
+    requests: { memory: "256Mi", cpu: "100m" }
+
+gateway:
+  replicaCount: 1
+  resources:
+    limits: { memory: "768Mi", cpu: "500m" }
+    requests: { memory: "512Mi", cpu: "200m" }
+
+account-db: { persistence: { enabled: false } }
+cash-db: { persistence: { enabled: false } }
+notification-db: { persistence: { enabled: false } }
+transfer-db: { persistence: { enabled: false } }
+keycloak: { postgresql: { persistence: { enabled: false } } }

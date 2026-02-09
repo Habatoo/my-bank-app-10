@@ -1,5 +1,6 @@
 package io.github.habatoo.models;
 
+import io.github.habatoo.dto.enums.Currency;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
@@ -44,6 +45,11 @@ public class Transfer {
      * Сумма перевода
      */
     private BigDecimal amount;
+
+    /**
+     * Валюта перевода
+     */
+    private Currency currency;
 
     /**
      * Дата и время совершения операции

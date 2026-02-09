@@ -1,5 +1,6 @@
 package io.github.habatoo.dto;
 
+import io.github.habatoo.dto.enums.Currency;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,4 +15,6 @@ import java.math.BigDecimal;
 public class TransferDto {
     private String login;
     private BigDecimal value;
+    private Currency fromCurrency;
+    private Currency toCurrency;
 }
